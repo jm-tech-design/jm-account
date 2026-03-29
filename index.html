@@ -187,7 +187,7 @@
         <div class="collapsible-header" onclick="UIManager.toggleSection('debtSimContent', 'debtSimToggleIcon')">
             부채 상환 대시보드 <span id="debtSimToggleIcon">▼</span>
         </div>
-        <div id="debtSimContent" style="margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 15px;">
+        <div id="debtSimContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 15px;">
             <div class="flex-row mobile-row" style="align-items: flex-end;">
                 <div style="flex:1; min-width:130px;">
                     <span style="font-size:11px; color:var(--text-muted);">목표 완납일 (연/월)</span>
@@ -361,11 +361,12 @@
             const mm = String(date.getMonth() + 1).padStart(2, '0');
             const dd = String(date.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}`;
-        }
+        },
+        getTodayString: () => Utils.getLocalYYYYMMDD(new Date())
     };
 
     // ==========================================
-    // 2. DataStore (초강력 방탄 파싱 및 타입 강제)
+    // 2. DataStore (안전 파싱 로직 적용)
     // ==========================================
     const DataStore = {
         state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {} },
@@ -376,7 +377,6 @@
                 const val = localStorage.getItem(key);
                 if (!val || val === 'undefined' || val === 'null') return defaultVal;
                 const parsed = JSON.parse(val);
-                // 강제 타입 방어: 배열이 필요한 곳에 객체가 들어오는 것을 원천 차단
                 if (typeof parsed === 'object' && parsed !== null) {
                     if (Array.isArray(defaultVal) && !Array.isArray(parsed)) return defaultVal;
                     return parsed;
@@ -389,7 +389,6 @@
         },
 
         init() {
-            // 완벽한 타입 캐스팅: 어떠한 구버전 백업이 오더라도 무조건 배열/객체 형태를 보장함
             this.state.entries = this.safeParse('accountBook_v2', []);
             if (!Array.isArray(this.state.entries)) this.state.entries = [];
             
@@ -506,7 +505,7 @@
     };
 
     // ==========================================
-    // 3. UIManager (에러 격리 렌더링 적용)
+    // 3. UIManager
     // ==========================================
     const UIManager = {
         currentEditId: null,
@@ -771,6 +770,7 @@
             document.getElementById('totalNetWorth').innerText = (totalAsset - totalLiability).toLocaleString();
         },
 
+        // [변경됨] 부채 시뮬레이터 HTML 렌더링 방식 조정 (강제 노출 방지)
         renderDebtSimulator() {
             const simBox = document.getElementById('debtSimulatorBox');
             if (!simBox) return;
@@ -788,11 +788,14 @@
                 }
             });
 
+            // 부채가 아예 없을 때만 전체 박스를 숨깁니다.
+            // 이미 HTML에 기본으로 박스는 보이되, 내용은 display:none으로 되어 있습니다.
             if (!hasLiability) {
                 simBox.style.display = 'none';
                 return;
+            } else {
+                simBox.style.display = 'block'; 
             }
-            simBox.style.display = 'block';
 
             DataStore.state.entries.forEach(e => {
                 if (!e.exclude) {
@@ -805,7 +808,6 @@
             currentTotal = 0;
             for (let key in assetMap) currentTotal += assetMap[key].currentBalance;
 
-            // [방어 추가] 목표일 데이터가 오염되었을 경우 강제 교정
             let targetStr = DataStore.state.settings?.debtTargetMonth;
             if (!targetStr || typeof targetStr !== 'string' || !targetStr.includes('-')) {
                 const d = new Date();
@@ -889,7 +891,6 @@
         },
 
         renderChart(filteredEntries, periodLabel, isSearchActive) {
-            // [방어 추가] 인터넷 연결 문제로 Chart 라이브러리가 로드되지 않은 경우 강제 에러 방지
             if (typeof Chart === 'undefined') {
                 const emptyEl = document.getElementById('expenseChartEmpty');
                 if (emptyEl) {
@@ -982,7 +983,6 @@
             });
         },
 
-        // [핵심 방어] 에러 격리 렌더링 로직 (한 곳이 고장나도 나머지는 무조건 출력됨)
         render() {
             try { this.calculateAndRenderAssets(); } catch(e) { console.error("Asset Error:", e); }
             try { this.renderDebtSimulator(); } catch(e) { console.error("Debt Sim Error:", e); }
