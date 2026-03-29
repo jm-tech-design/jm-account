@@ -107,7 +107,6 @@
         .settlement-bar-inc { background-color: var(--color-income); } .settlement-bar-exp { background-color: var(--color-expense); }
         .settlement-month-label { font-size: 11px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
 
-        /* [추가됨] 부채 시뮬레이터 프로그레스 바 스타일 */
         .progress-container { width: 100%; background-color: var(--border-light); border-radius: 8px; margin: 10px 0; overflow: hidden; height: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
         .progress-bar { height: 100%; background-color: var(--color-income); width: 0%; transition: width 0.8s ease-in-out; }
 
@@ -350,6 +349,9 @@
 <datalist id="noteHistoryList"></datalist>
 
 <script>
+    // ==========================================
+    // 1. Utilities
+    // ==========================================
     const Utils = {
         escHtml: (str) => {
             if (str === null || str === undefined) return '';
@@ -360,24 +362,38 @@
             const mm = String(date.getMonth() + 1).padStart(2, '0');
             const dd = String(date.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}`;
-        },
-        getTodayString: () => Utils.getLocalYYYYMMDD(new Date())
+        }
     };
 
+    // ==========================================
+    // 2. DataStore (안전 파싱 로직 적용)
+    // ==========================================
     const DataStore = {
         state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {} },
         history: { stack: [], pointer: -1, MAX: 10 },
         
+        // [추가됨] 과거 백업 파일과의 충돌을 막아주는 안전 파싱 함수
+        safeParse(key, defaultVal) {
+            try {
+                const val = localStorage.getItem(key);
+                if (!val || val === 'undefined') return defaultVal;
+                return JSON.parse(val) || defaultVal;
+            } catch (e) {
+                console.warn(`데이터 파싱 오류 복구됨: ${key}`, e);
+                return defaultVal;
+            }
+        },
+
         init() {
-            this.state.entries = JSON.parse(localStorage.getItem('accountBook_v2')) || [];
-            this.state.customCols = JSON.parse(localStorage.getItem('accountCols')) || [];
-            this.state.assets = JSON.parse(localStorage.getItem('accountAssets')) || [];
-            this.state.recurringTasks = JSON.parse(localStorage.getItem('accountRecurring_v2')) || [];
-            this.state.monthlyMemos = JSON.parse(localStorage.getItem('accountMonthlyMemos')) || {};
-            this.state.settings = JSON.parse(localStorage.getItem('accountSettings')) || {};
+            this.state.entries = this.safeParse('accountBook_v2', []);
+            this.state.customCols = this.safeParse('accountCols', []);
+            this.state.assets = this.safeParse('accountAssets', []);
+            this.state.recurringTasks = this.safeParse('accountRecurring_v2', []);
+            this.state.monthlyMemos = this.safeParse('accountMonthlyMemos', {});
+            this.state.settings = this.safeParse('accountSettings', {});
             
             if(this.state.entries.length === 0 && localStorage.getItem('accountBook')) {
-                this.state.entries = JSON.parse(localStorage.getItem('accountBook'));
+                this.state.entries = this.safeParse('accountBook', []);
                 this.save();
             }
             this.runMigration();
@@ -468,6 +484,9 @@
         }
     };
 
+    // ==========================================
+    // 3. UIManager
+    // ==========================================
     const UIManager = {
         currentEditId: null,
         currentAssetEditId: null,
@@ -731,7 +750,6 @@
             document.getElementById('totalNetWorth').innerText = (totalAsset - totalLiability).toLocaleString();
         },
 
-        // [추가됨] 부채 상환 시뮬레이터 렌더링 로직
         renderDebtSimulator() {
             const simBox = document.getElementById('debtSimulatorBox');
             if (!simBox) return;
@@ -766,7 +784,6 @@
             currentTotal = 0;
             for (let key in assetMap) currentTotal += assetMap[key].currentBalance;
 
-            // 중장기 계획의 표준인 4년(48개월)을 기본 목표일로 은연중에 자동 세팅
             let targetStr = DataStore.state.settings.debtTargetMonth;
             if (!targetStr) {
                 const d = new Date();
@@ -776,7 +793,8 @@
                 DataStore.save();
             }
 
-            document.getElementById('debtTargetMonth').value = targetStr;
+            const targetInput = document.getElementById('debtTargetMonth');
+            if (targetInput) targetInput.value = targetStr;
 
             const today = new Date();
             const [ty, tm] = targetStr.split('-');
@@ -929,7 +947,7 @@
 
         render() {
             this.calculateAndRenderAssets(); 
-            this.renderDebtSimulator(); // [호출됨] 시뮬레이터 렌더링
+            this.renderDebtSimulator();
             this.updateDescDatalist(); 
             this.syncMonthlyMemoUI(); 
             this.renderCalendar();
@@ -1264,9 +1282,10 @@
                     if (rData.entries && rData.customCols) {
                         localStorage.setItem('accountBook_v2', JSON.stringify(rData.entries));
                         localStorage.setItem('accountCols', JSON.stringify(rData.customCols));
-                        if (rData.assets) localStorage.setItem('accountAssets', JSON.stringify(rData.assets));
-                        if (rData.recurringTasks) localStorage.setItem('accountRecurring_v2', JSON.stringify(rData.recurringTasks));
-                        if (rData.monthlyMemos) localStorage.setItem('accountMonthlyMemos', JSON.stringify(rData.monthlyMemos));
+                        localStorage.setItem('accountAssets', JSON.stringify(rData.assets || []));
+                        localStorage.setItem('accountRecurring_v2', JSON.stringify(rData.recurringTasks || []));
+                        localStorage.setItem('accountMonthlyMemos', JSON.stringify(rData.monthlyMemos || {}));
+                        localStorage.setItem('accountSettings', JSON.stringify(rData.settings || {}));
                         alert('복원 완료.'); location.reload(); 
                     } else alert('형식 오류');
                 } catch (error) { alert('파일 읽기 오류'); }
