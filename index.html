@@ -51,6 +51,8 @@
         .bottom-nav { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; z-index: 990; pointer-events: none; }
         .bottom-nav .std-btn, .bottom-nav select { pointer-events: auto; height: 40px; padding: 0 16px; border-radius: 20px; font-size: 14px; font-weight: bold; background: rgba(255, 255, 255, 0.85); color: var(--text-title); border: 1px solid #b0b0b0; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin: 0; }
         .bottom-nav select { appearance: none; text-align: center; cursor: pointer; }
+        .btn-current { margin-left: 40px; } /* 현재 버튼 간격 띄우기 (데스크탑) */
+        
         @media (prefers-color-scheme: dark) { .bottom-nav .std-btn, .bottom-nav select { background: rgba(44, 44, 44, 0.85); color: #e0e0e0; border: 1px solid #777777; } }
 
         .box { border: 1px solid var(--border-main); padding: 15px; border-radius: 8px; background: var(--bg-sub); margin-bottom: 20px; }
@@ -101,14 +103,12 @@
         .settlement-bars { display: flex; width: 100%; justify-content: center; gap: 1px; height: 100%; align-items: flex-end; }
         .settlement-bar-inc, .settlement-bar-exp { width: 45%; min-height: 1px; border-radius: 2px 2px 0 0; }
         .settlement-bar-inc { background-color: var(--color-income); } .settlement-bar-exp { background-color: var(--color-expense); }
-        /* 10월, 11월, 12월 글씨 깨짐 방지 강제 고정 */
         .settlement-month-label { font-size: 11px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
 
         /* =========================================
-           📱 모바일 최적화 (대시보드 밀도 극대화)
+           📱 모바일 최적화 (대시보드 밀도 극대화 및 하단바 개선)
            ========================================= */
         @media screen and (max-width: 768px) {
-            /* 전체 여백 대폭 축소 */
             body { padding: 6px; padding-bottom: 80px; }
             h1 { font-size: 1.2em; margin-top: 25px; margin-bottom: 10px; }
             .box { padding: 10px; margin-bottom: 8px; border-radius: 6px; }
@@ -117,34 +117,30 @@
             .top-nav-bar { top: 8px; left: 8px; right: 8px; margin-bottom: 0; }
             .history-btn { height: 30px; padding: 0 12px; font-size: 11px; }
             
-            .bottom-nav { bottom: 10px; gap: 4px; padding: 0 5px; overflow-x: auto; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
-            .bottom-nav::-webkit-scrollbar { display: none; }
+            /* [개선] 하단바 중앙 정렬 및 여백 고정 */
+            .bottom-nav { bottom: 12px; gap: 4px; padding: 0; justify-content: center; }
             .bottom-nav .std-btn, .bottom-nav select { flex-shrink: 0; height: 34px; padding: 0 10px; font-size: 12px; width: auto; }
+            .btn-current { margin-left: 40px !important; } /* 현재 버튼 간격 띄우기 (모바일) */
 
-            /* 폼 높이 및 글씨 크기 축소 */
             input[type="text"], input[type="number"], input[type="date"], select, .std-btn, textarea { height: 30px; font-size: 12px; padding: 0 6px; }
             .util-btn { height: 24px; padding: 0 8px; font-size: 10px; }
 
-            /* 한 줄에 데이터 압축 배치 */
             .mobile-row { flex-wrap: wrap !important; gap: 4px !important; margin-bottom: 6px !important; }
             .mobile-row > * { flex: 1 1 45%; min-width: 100px !important; width: auto; }
             .mobile-row .btn-fixed { flex: 1 1 100%; min-width: 100% !important; } 
             
-            /* [개선] 데이터 관리 버튼 1열 완벽 정렬 */
             .action-buttons { display: flex; flex-wrap: nowrap; gap: 4px; overflow-x: auto; width: 100%; padding-bottom: 2px; }
             .action-buttons .std-btn { flex: 1; padding: 0 4px; font-size: 11px; white-space: nowrap; height: 32px; min-width: auto; }
             
             #inputFormGroup { display: flex; flex-direction: column; }
             #inputFormGroup > .row-assets { order: 1; } #inputFormGroup > .row-date-repeat { order: 2; } #inputFormGroup > #repeatEndDateContainer { order: 3; } #inputFormGroup > .row-type-amount { order: 4; } #inputFormGroup > .row-desc-note { order: 5; } #inputFormGroup > .row-memo { order: 6; } #inputFormGroup > .row-custom { order: 7; } #inputFormGroup > .row-submit { order: 8; }
             
-            /* 요약 박스 밀도 상향 */
             .hide-on-mobile { display: none !important; }
             .summary-box { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 10px 4px; margin-bottom: 10px; }
             .summary-box div { flex: 1 1 28%; min-width: 80px; text-align: center; padding: 0; line-height: 1.2; font-size: 11px; }
             .summary-box div > span:last-child { display: block; margin-top: 2px; font-size: 12px; font-weight: bold; }
             #sumBalance { font-size: 13px !important; }
             
-            /* 테이블 및 차트 글자 축소 */
             .num-wrap { width: 60px; } 
             table { font-size: 11px; } 
             th, td { padding: 6px 4px; }
