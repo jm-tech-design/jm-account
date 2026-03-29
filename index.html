@@ -15,7 +15,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* === 테마 색상 변수 (CSS Variables) === */
         :root {
             --bg-main: #f4f4f9; --bg-box: #ffffff; --bg-sub: #fafafa; --bg-input: #ffffff;
             --text-main: #333333; --text-title: #2c3e50; --text-muted: #7f8c8d;
@@ -366,18 +365,23 @@
     };
 
     // ==========================================
-    // 2. DataStore (안전 파싱 로직 적용)
+    // 2. DataStore (초강력 방탄 파싱 및 타입 강제)
     // ==========================================
     const DataStore = {
         state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {} },
         history: { stack: [], pointer: -1, MAX: 10 },
         
-        // [추가됨] 과거 백업 파일과의 충돌을 막아주는 안전 파싱 함수
         safeParse(key, defaultVal) {
             try {
                 const val = localStorage.getItem(key);
-                if (!val || val === 'undefined') return defaultVal;
-                return JSON.parse(val) || defaultVal;
+                if (!val || val === 'undefined' || val === 'null') return defaultVal;
+                const parsed = JSON.parse(val);
+                // 강제 타입 방어: 배열이 필요한 곳에 객체가 들어오는 것을 원천 차단
+                if (typeof parsed === 'object' && parsed !== null) {
+                    if (Array.isArray(defaultVal) && !Array.isArray(parsed)) return defaultVal;
+                    return parsed;
+                }
+                return defaultVal;
             } catch (e) {
                 console.warn(`데이터 파싱 오류 복구됨: ${key}`, e);
                 return defaultVal;
@@ -385,15 +389,28 @@
         },
 
         init() {
+            // 완벽한 타입 캐스팅: 어떠한 구버전 백업이 오더라도 무조건 배열/객체 형태를 보장함
             this.state.entries = this.safeParse('accountBook_v2', []);
+            if (!Array.isArray(this.state.entries)) this.state.entries = [];
+            
             this.state.customCols = this.safeParse('accountCols', []);
+            if (!Array.isArray(this.state.customCols)) this.state.customCols = [];
+            
             this.state.assets = this.safeParse('accountAssets', []);
+            if (!Array.isArray(this.state.assets)) this.state.assets = [];
+            
             this.state.recurringTasks = this.safeParse('accountRecurring_v2', []);
+            if (!Array.isArray(this.state.recurringTasks)) this.state.recurringTasks = [];
+            
             this.state.monthlyMemos = this.safeParse('accountMonthlyMemos', {});
+            if (typeof this.state.monthlyMemos !== 'object' || this.state.monthlyMemos === null) this.state.monthlyMemos = {};
+            
             this.state.settings = this.safeParse('accountSettings', {});
+            if (typeof this.state.settings !== 'object' || this.state.settings === null) this.state.settings = {};
             
             if(this.state.entries.length === 0 && localStorage.getItem('accountBook')) {
-                this.state.entries = this.safeParse('accountBook', []);
+                const oldEntries = this.safeParse('accountBook', []);
+                this.state.entries = Array.isArray(oldEntries) ? oldEntries : [];
                 this.save();
             }
             this.runMigration();
@@ -401,47 +418,51 @@
         },
 
         runMigration() {
-            let changed = false;
-            const oldNoteColIndex = this.state.customCols.findIndex(c => c.name === '비고' || c.name === '기타');
-            if (oldNoteColIndex !== -1) {
-                const oldColId = this.state.customCols[oldNoteColIndex].id;
-                this.state.entries.forEach(e => {
-                    if (e.customData && e.customData[oldColId] && !e.note) {
-                        e.note = e.customData[oldColId]; delete e.customData[oldColId]; changed = true;
-                    }
-                });
-                this.state.customCols.splice(oldNoteColIndex, 1);
-                changed = true;
-            }
-            this.state.entries.forEach(e => {
-                if (e.amount === undefined) { e.amount = Math.max(e.income || 0, e.expense || 0); changed = true; }
-                if (e.linkedAsset && !e.linkedAsset1) {
-                    e.linkedAsset1 = e.linkedAsset;
-                    const ast = this.state.assets.find(a => a.id === e.linkedAsset);
-                    if (ast) e.linkedAssetOp1 = (ast.type === 'asset') ? (e.income > 0 ? '+' : '-') : (e.expense > 0 ? '+' : '-');
-                    else e.linkedAssetOp1 = '-';
-                    delete e.linkedAsset; changed = true;
+            try {
+                let changed = false;
+                const oldNoteColIndex = this.state.customCols.findIndex(c => c.name === '비고' || c.name === '기타');
+                if (oldNoteColIndex !== -1) {
+                    const oldColId = this.state.customCols[oldNoteColIndex].id;
+                    this.state.entries.forEach(e => {
+                        if (e.customData && e.customData[oldColId] && !e.note) {
+                            e.note = e.customData[oldColId]; delete e.customData[oldColId]; changed = true;
+                        }
+                    });
+                    this.state.customCols.splice(oldNoteColIndex, 1);
+                    changed = true;
                 }
-                if(e.excludeStatsOnly === undefined) { e.excludeStatsOnly = false; changed = true; }
-            });
-            if (changed) this.save();
+                this.state.entries.forEach(e => {
+                    if (e.amount === undefined) { e.amount = Math.max(e.income || 0, e.expense || 0); changed = true; }
+                    if (e.linkedAsset && !e.linkedAsset1) {
+                        e.linkedAsset1 = e.linkedAsset;
+                        const ast = this.state.assets.find(a => a.id === e.linkedAsset);
+                        if (ast) e.linkedAssetOp1 = (ast.type === 'asset') ? (e.income > 0 ? '+' : '-') : (e.expense > 0 ? '+' : '-');
+                        else e.linkedAssetOp1 = '-';
+                        delete e.linkedAsset; changed = true;
+                    }
+                    if(e.excludeStatsOnly === undefined) { e.excludeStatsOnly = false; changed = true; }
+                });
+                if (changed) this.save();
+            } catch (e) {
+                console.error("마이그레이션 오류 발생:", e);
+            }
         },
 
         save() {
-            const optimizedEntries = this.state.entries.map(e => {
-                const opt = { ...e };
-                if (!opt.note) delete opt.note; if (!opt.memo) delete opt.memo;
-                if (!opt.linkedAsset1) { delete opt.linkedAsset1; delete opt.linkedAssetOp1; }
-                if (!opt.linkedAsset2) { delete opt.linkedAsset2; delete opt.linkedAssetOp2; }
-                if (!opt.exclude) delete opt.exclude; if (!opt.excludeStatsOnly) delete opt.excludeStatsOnly;
-                if (!opt.income) delete opt.income; if (!opt.expense) delete opt.expense;
-                if (opt.customData) {
-                    for (let key in opt.customData) if (!opt.customData[key]) delete opt.customData[key];
-                    if (Object.keys(opt.customData).length === 0) delete opt.customData;
-                }
-                return opt;
-            });
             try {
+                const optimizedEntries = this.state.entries.map(e => {
+                    const opt = { ...e };
+                    if (!opt.note) delete opt.note; if (!opt.memo) delete opt.memo;
+                    if (!opt.linkedAsset1) { delete opt.linkedAsset1; delete opt.linkedAssetOp1; }
+                    if (!opt.linkedAsset2) { delete opt.linkedAsset2; delete opt.linkedAssetOp2; }
+                    if (!opt.exclude) delete opt.exclude; if (!opt.excludeStatsOnly) delete opt.excludeStatsOnly;
+                    if (!opt.income) delete opt.income; if (!opt.expense) delete opt.expense;
+                    if (opt.customData) {
+                        for (let key in opt.customData) if (!opt.customData[key]) delete opt.customData[key];
+                        if (Object.keys(opt.customData).length === 0) delete opt.customData;
+                    }
+                    return opt;
+                });
                 localStorage.setItem('accountBook_v2', JSON.stringify(optimizedEntries));
                 localStorage.setItem('accountAssets', JSON.stringify(this.state.assets));
                 localStorage.setItem('accountCols', JSON.stringify(this.state.customCols));
@@ -485,7 +506,7 @@
     };
 
     // ==========================================
-    // 3. UIManager
+    // 3. UIManager (에러 격리 렌더링 적용)
     // ==========================================
     const UIManager = {
         currentEditId: null,
@@ -776,19 +797,21 @@
             DataStore.state.entries.forEach(e => {
                 if (!e.exclude) {
                     const amt = (e.type === 'transfer') ? (e.amount || 0) : ((e.income > 0) ? e.income : (e.expense || 0));
-                    if (e.linkedAsset1 && assetMap[e.linkedAsset1]) assetMap[e.linkedAsset1].currentBalance += (e.linkedAssetOp1 === '+' ? amt : -amt);
-                    if (e.linkedAsset2 && assetMap[e.linkedAsset2]) assetMap[e.linkedAsset2].currentBalance += (e.linkedAssetOp2 === '+' ? amt : -amt);
+                    if (e.linkedAsset1 && assetMap[e.linkedAsset1]) assetMap[e.linkedAsset1].currentBalance += (e.linkedAssetOp1 === '+' ? Number(amt) : -Number(amt));
+                    if (e.linkedAsset2 && assetMap[e.linkedAsset2]) assetMap[e.linkedAsset2].currentBalance += (e.linkedAssetOp2 === '+' ? Number(amt) : -Number(amt));
                 }
             });
 
             currentTotal = 0;
             for (let key in assetMap) currentTotal += assetMap[key].currentBalance;
 
-            let targetStr = DataStore.state.settings.debtTargetMonth;
-            if (!targetStr) {
+            // [방어 추가] 목표일 데이터가 오염되었을 경우 강제 교정
+            let targetStr = DataStore.state.settings?.debtTargetMonth;
+            if (!targetStr || typeof targetStr !== 'string' || !targetStr.includes('-')) {
                 const d = new Date();
                 d.setFullYear(d.getFullYear() + 4);
                 targetStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                if (!DataStore.state.settings) DataStore.state.settings = {};
                 DataStore.state.settings.debtTargetMonth = targetStr;
                 DataStore.save();
             }
@@ -797,9 +820,11 @@
             if (targetInput) targetInput.value = targetStr;
 
             const today = new Date();
-            const [ty, tm] = targetStr.split('-');
-            let monthsDiff = (parseInt(ty) - today.getFullYear()) * 12 + (parseInt(tm) - (today.getMonth() + 1));
-            if (monthsDiff <= 0) monthsDiff = 1;
+            const parts = targetStr.split('-');
+            const ty = parseInt(parts[0]) || today.getFullYear();
+            const tm = parseInt(parts[1]) || (today.getMonth() + 1);
+            let monthsDiff = (ty - today.getFullYear()) * 12 + (tm - (today.getMonth() + 1));
+            if (isNaN(monthsDiff) || monthsDiff <= 0) monthsDiff = 1;
 
             document.getElementById('debtRemainingMonths').innerText = monthsDiff;
             
@@ -836,7 +861,7 @@
 
             const dailyData = {};
             DataStore.state.entries.forEach(e => {
-                if (!e.exclude && !e.excludeStatsOnly && e.type !== 'transfer' && e.date?.startsWith(`${yearStr}-${monthStr}`)) {
+                if (!e.exclude && !e.excludeStatsOnly && e.type !== 'transfer' && String(e.date || '').startsWith(`${yearStr}-${monthStr}`)) {
                     const day = parseInt(e.date.slice(8, 10), 10);
                     if (!dailyData[day]) dailyData[day] = { inc: 0, exp: 0 };
                     if (e.income > 0) dailyData[day].inc += e.income; if (e.expense > 0) dailyData[day].exp += e.expense;
@@ -864,6 +889,18 @@
         },
 
         renderChart(filteredEntries, periodLabel, isSearchActive) {
+            // [방어 추가] 인터넷 연결 문제로 Chart 라이브러리가 로드되지 않은 경우 강제 에러 방지
+            if (typeof Chart === 'undefined') {
+                const emptyEl = document.getElementById('expenseChartEmpty');
+                if (emptyEl) {
+                    emptyEl.innerText = "차트 라이브러리(오프라인) 연결 안됨";
+                    emptyEl.style.display = 'block';
+                }
+                const canvasEl = document.getElementById('expenseChartCanvas');
+                if (canvasEl) canvasEl.style.display = 'none';
+                return;
+            }
+
             const chartType = document.getElementById('chartTypeSelect').value;
             document.getElementById('chartTitle').innerText = `${periodLabel} ${chartType === 'income' ? '수입' : (chartType === 'all' ? '통합' : '지출')} 통계`;
 
@@ -945,12 +982,13 @@
             });
         },
 
+        // [핵심 방어] 에러 격리 렌더링 로직 (한 곳이 고장나도 나머지는 무조건 출력됨)
         render() {
-            this.calculateAndRenderAssets(); 
-            this.renderDebtSimulator();
-            this.updateDescDatalist(); 
-            this.syncMonthlyMemoUI(); 
-            this.renderCalendar();
+            try { this.calculateAndRenderAssets(); } catch(e) { console.error("Asset Error:", e); }
+            try { this.renderDebtSimulator(); } catch(e) { console.error("Debt Sim Error:", e); }
+            try { this.updateDescDatalist(); } catch(e) { console.error("Datalist Error:", e); }
+            try { this.syncMonthlyMemoUI(); } catch(e) { console.error("Memo Error:", e); }
+            try { this.renderCalendar(); } catch(e) { console.error("Calendar Error:", e); }
 
             const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
             const searchInput = document.getElementById('searchInput'); const sKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
@@ -1034,7 +1072,7 @@
             if(document.getElementById('sumExpense')) document.getElementById('sumExpense').innerText = periodExpense.toLocaleString();
             if(document.getElementById('sumBalance')) document.getElementById('sumBalance').innerText = (isSearchActive ? pNet : carriedBalance + pNet).toLocaleString();
 
-            this.renderChart(filteredEntries, pLabel, isSearchActive);
+            try { this.renderChart(filteredEntries, pLabel, isSearchActive); } catch(e) { console.error("Chart Error:", e); }
         },
 
         openYearlySettlement(targetYear) {
@@ -1279,22 +1317,29 @@
             reader.onload = (e) => {
                 try {
                     const rData = JSON.parse(e.target.result);
-                    if (rData.entries && rData.customCols) {
-                        localStorage.setItem('accountBook_v2', JSON.stringify(rData.entries));
-                        localStorage.setItem('accountCols', JSON.stringify(rData.customCols));
-                        localStorage.setItem('accountAssets', JSON.stringify(rData.assets || []));
-                        localStorage.setItem('accountRecurring_v2', JSON.stringify(rData.recurringTasks || []));
-                        localStorage.setItem('accountMonthlyMemos', JSON.stringify(rData.monthlyMemos || {}));
-                        localStorage.setItem('accountSettings', JSON.stringify(rData.settings || {}));
+                    if (rData && typeof rData === 'object') {
+                        const _entries = Array.isArray(rData.entries) ? rData.entries : (Array.isArray(rData) ? rData : []);
+                        const _customCols = Array.isArray(rData.customCols) ? rData.customCols : [];
+                        const _assets = Array.isArray(rData.assets) ? rData.assets : [];
+                        const _recurring = Array.isArray(rData.recurringTasks) ? rData.recurringTasks : [];
+                        const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
+                        const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
+                        
+                        localStorage.setItem('accountBook_v2', JSON.stringify(_entries));
+                        localStorage.setItem('accountCols', JSON.stringify(_customCols));
+                        localStorage.setItem('accountAssets', JSON.stringify(_assets));
+                        localStorage.setItem('accountRecurring_v2', JSON.stringify(_recurring));
+                        localStorage.setItem('accountMonthlyMemos', JSON.stringify(_memos));
+                        localStorage.setItem('accountSettings', JSON.stringify(_settings));
+                        
                         alert('복원 완료.'); location.reload(); 
-                    } else alert('형식 오류');
+                    } else alert('지원하지 않는 백업 파일입니다.');
                 } catch (error) { alert('파일 읽기 오류'); }
             };
             reader.readAsText(file);
         }
     };
 
-    // 앱 실행 및 서비스 워커 등록
     AppCtrl.init();
 
     if ('serviceWorker' in navigator) {
