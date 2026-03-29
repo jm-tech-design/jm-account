@@ -12,7 +12,6 @@
     <link rel="apple-touch-icon" href="./icon-192x192.png">
 
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -84,6 +83,13 @@
         .excluded-badge { font-size: 10px; background: var(--text-muted); color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
         .carried-row { background-color: var(--bg-carried); font-weight: bold; }
         
+        .chart-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
+        .chart-label { width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chart-bar-wrap { flex: 1; background: var(--bg-chart); height: 14px; border-radius: 7px; margin: 0 10px; }
+        .chart-bar { height: 100%; width: 0%; transition: width 0.3s; }
+        .chart-val { display: flex; width: 135px; justify-content: flex-end; align-items: baseline; font-weight: bold; font-variant-numeric: tabular-nums; }
+        .chart-val-amt { flex: 1; text-align: right; } .chart-val-pct { width: 48px; text-align: right; font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: 4px; }
+        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-light); border: 1px solid var(--border-light); border-radius: 4px; }
         .cal-header { background: var(--bg-table-head); color: var(--text-table-head); text-align: center; font-size: 12px; padding: 6px 0; }
         .cal-day { background: var(--bg-box); min-height: 60px; padding: 4px; display: flex; flex-direction: column; text-align: right; }
@@ -101,6 +107,10 @@
         .settlement-bar-inc { background-color: var(--color-income); } .settlement-bar-exp { background-color: var(--color-expense); }
         .settlement-month-label { font-size: 11px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
 
+        /* [추가됨] 부채 시뮬레이터 프로그레스 바 스타일 */
+        .progress-container { width: 100%; background-color: var(--border-light); border-radius: 8px; margin: 10px 0; overflow: hidden; height: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .progress-bar { height: 100%; background-color: var(--color-income); width: 0%; transition: width 0.8s ease-in-out; }
+
         /* =========================================
            📱 모바일 최적화
            ========================================= */
@@ -117,7 +127,7 @@
             .bottom-nav .std-btn, .bottom-nav select { flex-shrink: 0; height: 34px; padding: 0 10px; font-size: 12px; width: auto; }
             .btn-current { margin-left: 40px !important; }
 
-            input[type="text"], input[type="number"], input[type="date"], select, .std-btn, textarea { height: 30px; font-size: 12px; padding: 0 6px; }
+            input[type="text"], input[type="number"], input[type="date"], input[type="month"], select, .std-btn, textarea { height: 30px; font-size: 12px; padding: 0 6px; }
             .util-btn { height: 24px; padding: 0 8px; font-size: 10px; }
 
             .mobile-row { flex-wrap: wrap !important; gap: 4px !important; margin-bottom: 6px !important; }
@@ -175,33 +185,39 @@
         </div>
     </div>
 
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('customColContent', 'colToggleIcon')">
-            상세 내역 (열) 관리 <span id="colToggleIcon">▼</span>
+    <div class="box" id="debtSimulatorBox" style="display: none;">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('debtSimContent', 'debtSimToggleIcon')">
+            🎯 부채 상환 대시보드 <span id="debtSimToggleIcon">▼</span>
         </div>
-        <div id="customColContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div class="flex-row mobile-row" style="margin-bottom: 10px;">
-                <input type="text" id="newColName" placeholder="새 항목 이름 (예: 결제수단)" class="flex-1">
-                <button class="std-btn btn-fixed" onclick="AppCtrl.addColumn()">추가</button>
+        <div id="debtSimContent" style="margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 15px;">
+            <div class="flex-row mobile-row" style="align-items: flex-end;">
+                <div style="flex:1; min-width:130px;">
+                    <span style="font-size:11px; color:var(--text-muted);">목표 완납일 (연/월)</span>
+                    <input type="month" id="debtTargetMonth" onchange="AppCtrl.updateDebtTarget(this.value)" style="width:100%;">
+                </div>
+                <div style="flex:1; min-width:130px; text-align:right;">
+                    <span style="font-size:11px; color:var(--text-muted);">남은 기간</span><br>
+                    <span style="font-size:18px; font-weight:bold; color:var(--color-expense);" id="debtRemainingMonths">0</span>개월
+                </div>
             </div>
-            <ul class="col-list" id="customColList"></ul>
-        </div>
-    </div>
-
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('monthlyMemoContainer', 'monthlyMemoToggleIcon')">
-            <span id="monthlyMemoTitle">월간 메모</span>
-            <div>
-                <span id="monthlyMemoIndicator" style="color:var(--color-expense); font-size:12px; margin-right:8px; display:none;">[메모 있음]</span>
-                <span id="monthlyMemoToggleIcon">▼</span>
+            
+            <div style="margin-top: 15px; padding: 15px; background: var(--bg-highlight); border-radius: 8px; text-align: center; border: 1px solid var(--border-highlight);">
+                <span style="font-size:12px; color:var(--text-title);">완납 목표 달성을 위한 권장 월 상환액</span><br>
+                <span style="font-size:24px; font-weight:bold; color:var(--color-income);" id="debtMonthlyRequired">0</span>원
             </div>
-        </div>
-        <div id="monthlyMemoContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div id="monthlyMemoNotAvailable" style="display:none; color:var(--text-muted); font-size:12px; text-align:center; padding: 10px 0;">
-                특정 연도와 월을 필터에서 선택해야 해당 월의 메모를 작성할 수 있습니다.
-            </div>
-            <div id="monthlyMemoEditArea">
-                <textarea id="monthlyMemoTextarea" style="width:100%; height:100px; padding:10px; border:1px solid var(--border-input); border-radius:4px; font-family:inherit; resize:vertical; background-color:var(--bg-input); color:var(--text-main);" placeholder="이번 달의 예산, 목표, 특이사항 등을 기록하세요." oninput="AppCtrl.saveMonthlyMemo()"></textarea>
+            
+            <div style="margin-top: 15px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span>현재 상환 진행률</span>
+                    <span id="debtProgressText" style="font-weight:bold; color: var(--color-income);">0%</span>
+                </div>
+                <div class="progress-container">
+                    <div id="debtProgressBar" class="progress-bar"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top: 6px;">
+                    <span>총 상환액: <span id="debtPaidAmount" style="font-weight:bold; color:var(--text-main);">0</span>원</span>
+                    <span>남은 부채: <span id="debtCurrentAmount" style="font-weight:bold; color:var(--color-expense);">0</span>원</span>
+                </div>
             </div>
         </div>
     </div>
@@ -285,6 +301,19 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
+
+    <div class="box" style="margin-top: 20px;">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('customColContent', 'colToggleIcon')">
+            상세 내역 (열) 관리 <span id="colToggleIcon">▼</span>
+        </div>
+        <div id="customColContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+            <div class="flex-row mobile-row" style="margin-bottom: 10px;">
+                <input type="text" id="newColName" placeholder="새 항목 이름 (예: 결제수단)" class="flex-1">
+                <button class="std-btn btn-fixed" onclick="AppCtrl.addColumn()">추가</button>
+            </div>
+            <ul class="col-list" id="customColList"></ul>
+        </div>
+    </div>
 </div>
 
 <div class="bottom-nav">
@@ -336,7 +365,7 @@
     };
 
     const DataStore = {
-        state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {} },
+        state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {} },
         history: { stack: [], pointer: -1, MAX: 10 },
         
         init() {
@@ -345,6 +374,7 @@
             this.state.assets = JSON.parse(localStorage.getItem('accountAssets')) || [];
             this.state.recurringTasks = JSON.parse(localStorage.getItem('accountRecurring_v2')) || [];
             this.state.monthlyMemos = JSON.parse(localStorage.getItem('accountMonthlyMemos')) || {};
+            this.state.settings = JSON.parse(localStorage.getItem('accountSettings')) || {};
             
             if(this.state.entries.length === 0 && localStorage.getItem('accountBook')) {
                 this.state.entries = JSON.parse(localStorage.getItem('accountBook'));
@@ -401,6 +431,7 @@
                 localStorage.setItem('accountCols', JSON.stringify(this.state.customCols));
                 localStorage.setItem('accountRecurring_v2', JSON.stringify(this.state.recurringTasks));
                 localStorage.setItem('accountMonthlyMemos', JSON.stringify(this.state.monthlyMemos));
+                localStorage.setItem('accountSettings', JSON.stringify(this.state.settings));
             } catch (e) {
                 if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업(JSON) 후 오래된 내역을 삭제하세요.');
             }
@@ -441,7 +472,7 @@
         currentEditId: null,
         currentAssetEditId: null,
         currentSettlementYear: null,
-        expenseChartObj: null, // [추가됨] Chart.js 인스턴스 보관용
+        expenseChartObj: null,
 
         initFilters() {
             const yearSelect = document.getElementById('yearFilter');
@@ -700,6 +731,77 @@
             document.getElementById('totalNetWorth').innerText = (totalAsset - totalLiability).toLocaleString();
         },
 
+        // [추가됨] 부채 상환 시뮬레이터 렌더링 로직
+        renderDebtSimulator() {
+            const simBox = document.getElementById('debtSimulatorBox');
+            if (!simBox) return;
+
+            let initialTotal = 0;
+            let currentTotal = 0;
+            let hasLiability = false;
+
+            const assetMap = {};
+            DataStore.state.assets.forEach(a => {
+                if (a.type === 'liability') {
+                    hasLiability = true;
+                    assetMap[a.id] = { ...a, currentBalance: a.baseBalance || 0 };
+                    initialTotal += a.baseBalance || 0;
+                }
+            });
+
+            if (!hasLiability) {
+                simBox.style.display = 'none';
+                return;
+            }
+            simBox.style.display = 'block';
+
+            DataStore.state.entries.forEach(e => {
+                if (!e.exclude) {
+                    const amt = (e.type === 'transfer') ? (e.amount || 0) : ((e.income > 0) ? e.income : (e.expense || 0));
+                    if (e.linkedAsset1 && assetMap[e.linkedAsset1]) assetMap[e.linkedAsset1].currentBalance += (e.linkedAssetOp1 === '+' ? amt : -amt);
+                    if (e.linkedAsset2 && assetMap[e.linkedAsset2]) assetMap[e.linkedAsset2].currentBalance += (e.linkedAssetOp2 === '+' ? amt : -amt);
+                }
+            });
+
+            currentTotal = 0;
+            for (let key in assetMap) currentTotal += assetMap[key].currentBalance;
+
+            // 중장기 계획의 표준인 4년(48개월)을 기본 목표일로 은연중에 자동 세팅
+            let targetStr = DataStore.state.settings.debtTargetMonth;
+            if (!targetStr) {
+                const d = new Date();
+                d.setFullYear(d.getFullYear() + 4);
+                targetStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                DataStore.state.settings.debtTargetMonth = targetStr;
+                DataStore.save();
+            }
+
+            document.getElementById('debtTargetMonth').value = targetStr;
+
+            const today = new Date();
+            const [ty, tm] = targetStr.split('-');
+            let monthsDiff = (parseInt(ty) - today.getFullYear()) * 12 + (parseInt(tm) - (today.getMonth() + 1));
+            if (monthsDiff <= 0) monthsDiff = 1;
+
+            document.getElementById('debtRemainingMonths').innerText = monthsDiff;
+            
+            const monthlyReq = Math.ceil(currentTotal / monthsDiff);
+            document.getElementById('debtMonthlyRequired').innerText = monthlyReq.toLocaleString();
+
+            const paid = initialTotal - currentTotal;
+            let pct = 0;
+            if (initialTotal > 0) {
+                pct = (paid / initialTotal) * 100;
+                if (pct < 0) pct = 0;
+                if (pct > 100) pct = 100;
+            }
+            
+            document.getElementById('debtProgressText').innerText = pct.toFixed(1) + '%';
+            document.getElementById('debtProgressBar').style.width = pct + '%';
+            document.getElementById('debtPaidAmount').innerText = paid > 0 ? paid.toLocaleString() : '0';
+            document.getElementById('debtCurrentAmount').innerText = currentTotal.toLocaleString();
+        },
+
         renderCalendar() {
             const calDiv = document.getElementById('calendarUI');
             const yearStr = document.getElementById('yearFilter').value; const monthStr = document.getElementById('monthFilter').value;
@@ -743,7 +845,6 @@
             html += '</div>'; calDiv.innerHTML = html;
         },
 
-        // [변경됨] Chart.js 데이터 매핑 및 도넛 차트 렌더링 로직
         renderChart(filteredEntries, periodLabel, isSearchActive) {
             const chartType = document.getElementById('chartTypeSelect').value;
             document.getElementById('chartTitle').innerText = `${periodLabel} ${chartType === 'income' ? '수입' : (chartType === 'all' ? '통합' : '지출')} 통계`;
@@ -762,7 +863,6 @@
                 }
             });
 
-            // 1. 기존 차트가 있다면 파괴 (오류 방지)
             if (this.expenseChartObj) {
                 this.expenseChartObj.destroy();
             }
@@ -770,7 +870,6 @@
             const canvasEl = document.getElementById('expenseChartCanvas');
             const emptyEl = document.getElementById('expenseChartEmpty');
 
-            // 2. 데이터가 없을 때 처리
             if (totalAmount === 0) {
                 canvasEl.style.display = 'none';
                 emptyEl.style.display = 'block';
@@ -780,19 +879,16 @@
                 emptyEl.style.display = 'none';
             }
 
-            // 3. 데이터를 Chart.js 규격(배열)으로 분리
             const sortedDescs = Object.keys(dataByDesc).sort((a, b) => dataByDesc[b] - dataByDesc[a]);
             const chartData = sortedDescs.map(desc => dataByDesc[desc]);
             
-            // 색상 자동 배정 (수입은 파란색 계열, 지출은 붉은색 계열)
             const backgroundColors = sortedDescs.map((desc, index) => {
-                const alpha = Math.max(0.3, 1 - (index * 0.1)); // 항목이 많아질수록 투명도 조절
+                const alpha = Math.max(0.3, 1 - (index * 0.1)); 
                 if (chartType === 'income') return `rgba(41, 128, 185, ${alpha})`;
                 if (chartType === 'all') return desc.startsWith('[수입]') ? `rgba(41, 128, 185, ${alpha})` : `rgba(192, 57, 43, ${alpha})`;
-                return `rgba(192, 57, 43, ${alpha})`; // 지출
+                return `rgba(192, 57, 43, ${alpha})`; 
             });
 
-            // 4. 도넛 차트 생성
             this.expenseChartObj = new Chart(canvasEl, {
                 type: 'doughnut',
                 data: {
@@ -810,10 +906,7 @@
                     plugins: {
                         legend: { 
                             position: 'right',
-                            labels: {
-                                font: { size: 10, family: "'Pretendard Variable', sans-serif" },
-                                boxWidth: 12
-                            }
+                            labels: { font: { size: 10, family: "'Pretendard Variable', sans-serif" }, boxWidth: 12 }
                         },
                         tooltip: {
                             callbacks: {
@@ -835,7 +928,11 @@
         },
 
         render() {
-            this.calculateAndRenderAssets(); this.updateDescDatalist(); this.syncMonthlyMemoUI(); this.renderCalendar();
+            this.calculateAndRenderAssets(); 
+            this.renderDebtSimulator(); // [호출됨] 시뮬레이터 렌더링
+            this.updateDescDatalist(); 
+            this.syncMonthlyMemoUI(); 
+            this.renderCalendar();
 
             const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
             const searchInput = document.getElementById('searchInput'); const sKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
@@ -990,6 +1087,12 @@
     const AppCtrl = {
         init() { DataStore.init(); UIManager.initFilters(); UIManager.renderAll(); this.checkRecurringTasks(); },
         saveMonthlyMemo() { UIManager.saveMonthlyMemo(); },
+        updateDebtTarget(val) {
+            if (!val) return;
+            DataStore.state.settings.debtTargetMonth = val;
+            DataStore.save();
+            UIManager.renderDebtSimulator();
+        },
         addAsset() {
             const type = document.getElementById('newAssetType').value; const name = document.getElementById('newAssetName').value.trim();
             const balance = parseInt(document.getElementById('newAssetBalance').value) || 0;
