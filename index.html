@@ -361,8 +361,7 @@
             const mm = String(date.getMonth() + 1).padStart(2, '0');
             const dd = String(date.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}`;
-        },
-        getTodayString: () => Utils.getLocalYYYYMMDD(new Date())
+        }
     };
 
     // ==========================================
@@ -770,7 +769,6 @@
             document.getElementById('totalNetWorth').innerText = (totalAsset - totalLiability).toLocaleString();
         },
 
-        // [변경됨] 부채 시뮬레이터 HTML 렌더링 방식 조정 (강제 노출 방지)
         renderDebtSimulator() {
             const simBox = document.getElementById('debtSimulatorBox');
             if (!simBox) return;
@@ -788,8 +786,6 @@
                 }
             });
 
-            // 부채가 아예 없을 때만 전체 박스를 숨깁니다.
-            // 이미 HTML에 기본으로 박스는 보이되, 내용은 display:none으로 되어 있습니다.
             if (!hasLiability) {
                 simBox.style.display = 'none';
                 return;
@@ -890,6 +886,7 @@
             html += '</div>'; calDiv.innerHTML = html;
         },
 
+        // [핵심 변경] 차트 색상 팔레트 도입 (가독성 향상)
         renderChart(filteredEntries, periodLabel, isSearchActive) {
             if (typeof Chart === 'undefined') {
                 const emptyEl = document.getElementById('expenseChartEmpty');
@@ -938,11 +935,19 @@
             const sortedDescs = Object.keys(dataByDesc).sort((a, b) => dataByDesc[b] - dataByDesc[a]);
             const chartData = sortedDescs.map(desc => dataByDesc[desc]);
             
-            const backgroundColors = sortedDescs.map((desc, index) => {
-                const alpha = Math.max(0.3, 1 - (index * 0.1)); 
-                if (chartType === 'income') return `rgba(41, 128, 185, ${alpha})`;
-                if (chartType === 'all') return desc.startsWith('[수입]') ? `rgba(41, 128, 185, ${alpha})` : `rgba(192, 57, 43, ${alpha})`;
-                return `rgba(192, 57, 43, ${alpha})`; 
+            // [개선됨] 뚜렷하게 구별되는 고대비(High Contrast) 색상 팔레트 세트
+            const expensePalette = ['#e74c3c', '#f39c12', '#d35400', '#8e44ad', '#c0392b', '#bdc3c7', '#ff9ff3', '#f368e0', '#ff7f50', '#fdcb6e', '#e55039'];
+            const incomePalette = ['#3498db', '#2ecc71', '#1abc9c', '#2980b9', '#27ae60', '#16a085', '#00cec9', '#0984e3', '#74b9ff', '#55efc4', '#81ecec'];
+            
+            let incCount = 0;
+            let expCount = 0;
+            
+            const backgroundColors = sortedDescs.map((desc) => {
+                if (chartType === 'income') return incomePalette[incCount++ % incomePalette.length];
+                if (chartType === 'expense') return expensePalette[expCount++ % expensePalette.length];
+                // 통합 모드일 경우 이름의 접두사로 구분
+                if (desc.startsWith('[수입]')) return incomePalette[incCount++ % incomePalette.length];
+                return expensePalette[expCount++ % expensePalette.length];
             });
 
             this.expenseChartObj = new Chart(canvasEl, {
