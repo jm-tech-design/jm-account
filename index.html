@@ -12,6 +12,9 @@
     <link rel="apple-touch-icon" href="./icon-192x192.png">
 
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         /* === 테마 색상 변수 (CSS Variables) === */
         :root {
@@ -51,7 +54,7 @@
         .bottom-nav { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; z-index: 990; pointer-events: none; }
         .bottom-nav .std-btn, .bottom-nav select { pointer-events: auto; height: 40px; padding: 0 16px; border-radius: 20px; font-size: 14px; font-weight: bold; background: rgba(255, 255, 255, 0.85); color: var(--text-title); border: 1px solid #b0b0b0; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin: 0; }
         .bottom-nav select { appearance: none; text-align: center; cursor: pointer; }
-        .btn-current { margin-left: 40px; } /* 현재 버튼 간격 띄우기 (데스크탑) */
+        .btn-current { margin-left: 40px; }
         
         @media (prefers-color-scheme: dark) { .bottom-nav .std-btn, .bottom-nav select { background: rgba(44, 44, 44, 0.85); color: #e0e0e0; border: 1px solid #777777; } }
 
@@ -81,13 +84,6 @@
         .excluded-badge { font-size: 10px; background: var(--text-muted); color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
         .carried-row { background-color: var(--bg-carried); font-weight: bold; }
         
-        .chart-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
-        .chart-label { width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .chart-bar-wrap { flex: 1; background: var(--bg-chart); height: 14px; border-radius: 7px; margin: 0 10px; }
-        .chart-bar { height: 100%; width: 0%; transition: width 0.3s; }
-        .chart-val { display: flex; width: 135px; justify-content: flex-end; align-items: baseline; font-weight: bold; font-variant-numeric: tabular-nums; }
-        .chart-val-amt { flex: 1; text-align: right; } .chart-val-pct { width: 48px; text-align: right; font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: 4px; }
-        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-light); border: 1px solid var(--border-light); border-radius: 4px; }
         .cal-header { background: var(--bg-table-head); color: var(--text-table-head); text-align: center; font-size: 12px; padding: 6px 0; }
         .cal-day { background: var(--bg-box); min-height: 60px; padding: 4px; display: flex; flex-direction: column; text-align: right; }
@@ -106,7 +102,7 @@
         .settlement-month-label { font-size: 11px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
 
         /* =========================================
-           📱 모바일 최적화 (대시보드 밀도 극대화 및 하단바 개선)
+           📱 모바일 최적화
            ========================================= */
         @media screen and (max-width: 768px) {
             body { padding: 6px; padding-bottom: 80px; }
@@ -117,10 +113,9 @@
             .top-nav-bar { top: 8px; left: 8px; right: 8px; margin-bottom: 0; }
             .history-btn { height: 30px; padding: 0 12px; font-size: 11px; }
             
-            /* [개선] 하단바 중앙 정렬 및 여백 고정 */
             .bottom-nav { bottom: 12px; gap: 4px; padding: 0; justify-content: center; }
             .bottom-nav .std-btn, .bottom-nav select { flex-shrink: 0; height: 34px; padding: 0 10px; font-size: 12px; width: auto; }
-            .btn-current { margin-left: 40px !important; } /* 현재 버튼 간격 띄우기 (모바일) */
+            .btn-current { margin-left: 40px !important; }
 
             input[type="text"], input[type="number"], input[type="date"], select, .std-btn, textarea { height: 30px; font-size: 12px; padding: 0 6px; }
             .util-btn { height: 24px; padding: 0 8px; font-size: 10px; }
@@ -145,11 +140,6 @@
             table { font-size: 11px; } 
             th, td { padding: 6px 4px; }
             
-            .chart-row { font-size: 10px; margin-bottom: 4px; }
-            .chart-label { width: 75px; }
-            .chart-val { width: 100px; font-size: 11px; }
-            .chart-val-pct { width: 40px; font-size: 9px; margin-left: 2px; }
-
             .cal-day { min-height: 40px; padding: 2px; }
             .cal-date { font-size: 10px; }
             .cal-inc, .cal-exp { font-size: 9px; }
@@ -175,12 +165,12 @@
             데이터 관리 (결산/백업/복원) <span id="actionToggleIcon">▼</span>
         </div>
         <div id="actionButtonsContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div class="action-buttons">
-                <button class="std-btn bg-blue" onclick="UIManager.openYearlySettlement()">연도 결산</button>
-                <button class="std-btn bg-green" onclick="AppCtrl.exportToCSV()">CSV 변환</button>
-                <button class="std-btn bg-purple" onclick="AppCtrl.backupData()">데이터 백업</button>
+            <div class="action-buttons flex-row">
+                <button class="std-btn bg-blue flex-1" onclick="UIManager.openYearlySettlement()">연도 결산</button>
+                <button class="std-btn bg-green flex-1" onclick="AppCtrl.exportToCSV()">CSV 변환</button>
+                <button class="std-btn bg-purple flex-1" onclick="AppCtrl.backupData()">데이터 백업</button>
                 <input type="file" id="restoreInput" style="display:none;" accept=".json" onchange="AppCtrl.restoreData(event)">
-                <button class="std-btn bg-orange" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
+                <button class="std-btn bg-orange flex-1" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
             </div>
         </div>
     </div>
@@ -261,13 +251,16 @@
     </div>
 
     <div class="box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 id="chartTitle" style="margin: 0; color: var(--text-title); font-size: 15px;">전체 기간 지출 통계</h3>
             <select id="chartTypeSelect" onchange="UIManager.render()" style="width: auto;">
                 <option value="expense">지출</option><option value="income">수입</option><option value="all">수입/지출 통합</option>
             </select>
         </div>
-        <div id="expenseChart">데이터가 없습니다.</div>
+        <div style="position: relative; height: 220px; width: 100%;">
+            <canvas id="expenseChartCanvas"></canvas>
+            <div id="expenseChartEmpty" style="display:none; text-align:center; color:var(--text-muted); margin-top:80px; font-size:12px;">기록이 없습니다.</div>
+        </div>
     </div>
 
     <div class="summary-box">
@@ -328,9 +321,6 @@
 <datalist id="noteHistoryList"></datalist>
 
 <script>
-    // ==========================================
-    // 1. Utilities
-    // ==========================================
     const Utils = {
         escHtml: (str) => {
             if (str === null || str === undefined) return '';
@@ -345,9 +335,6 @@
         getTodayString: () => Utils.getLocalYYYYMMDD(new Date())
     };
 
-    // ==========================================
-    // 2. DataStore
-    // ==========================================
     const DataStore = {
         state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {} },
         history: { stack: [], pointer: -1, MAX: 10 },
@@ -450,13 +437,11 @@
         }
     };
 
-    // ==========================================
-    // 3. UIManager
-    // ==========================================
     const UIManager = {
         currentEditId: null,
         currentAssetEditId: null,
         currentSettlementYear: null,
+        expenseChartObj: null, // [추가됨] Chart.js 인스턴스 보관용
 
         initFilters() {
             const yearSelect = document.getElementById('yearFilter');
@@ -758,8 +743,9 @@
             html += '</div>'; calDiv.innerHTML = html;
         },
 
+        // [변경됨] Chart.js 데이터 매핑 및 도넛 차트 렌더링 로직
         renderChart(filteredEntries, periodLabel, isSearchActive) {
-            const chartDiv = document.getElementById('expenseChart'); const chartType = document.getElementById('chartTypeSelect').value;
+            const chartType = document.getElementById('chartTypeSelect').value;
             document.getElementById('chartTitle').innerText = `${periodLabel} ${chartType === 'income' ? '수입' : (chartType === 'all' ? '통합' : '지출')} 통계`;
 
             let totalAmount = 0; const dataByDesc = {};
@@ -776,20 +762,76 @@
                 }
             });
 
-            if (totalAmount === 0) { chartDiv.innerHTML = `<p style="text-align:center; color:var(--text-muted); margin-top:20px; font-size:12px;">기록이 없습니다.</p>`; return; }
-            const sortedDescs = Object.keys(dataByDesc).sort((a, b) => dataByDesc[b] - dataByDesc[a]);
-            const maxAmount = dataByDesc[sortedDescs[0]];
+            // 1. 기존 차트가 있다면 파괴 (오류 방지)
+            if (this.expenseChartObj) {
+                this.expenseChartObj.destroy();
+            }
 
-            chartDiv.innerHTML = sortedDescs.map(desc => {
-                const amt = dataByDesc[desc];
-                const pTotal = ((amt / totalAmount) * 100).toFixed(1); const pMax = ((amt / maxAmount) * 100).toFixed(1); 
-                let bColor = chartType === 'income' ? 'var(--color-income)' : (chartType === 'all' ? (desc.startsWith('[수입]') ? 'var(--color-income)' : 'var(--color-expense)') : 'var(--color-expense)');
-                return `<div class="chart-row">
-                    <div class="chart-label" title="${Utils.escHtml(desc)}">${Utils.escHtml(desc)}</div>
-                    <div class="chart-bar-wrap"><div class="chart-bar" style="width: ${pMax}%; background-color: ${bColor};"></div></div>
-                    <div class="chart-val"><span class="chart-val-amt">${amt.toLocaleString()}</span><span class="chart-val-pct">(${pTotal}%)</span></div>
-                </div>`;
-            }).join('');
+            const canvasEl = document.getElementById('expenseChartCanvas');
+            const emptyEl = document.getElementById('expenseChartEmpty');
+
+            // 2. 데이터가 없을 때 처리
+            if (totalAmount === 0) {
+                canvasEl.style.display = 'none';
+                emptyEl.style.display = 'block';
+                return;
+            } else {
+                canvasEl.style.display = 'block';
+                emptyEl.style.display = 'none';
+            }
+
+            // 3. 데이터를 Chart.js 규격(배열)으로 분리
+            const sortedDescs = Object.keys(dataByDesc).sort((a, b) => dataByDesc[b] - dataByDesc[a]);
+            const chartData = sortedDescs.map(desc => dataByDesc[desc]);
+            
+            // 색상 자동 배정 (수입은 파란색 계열, 지출은 붉은색 계열)
+            const backgroundColors = sortedDescs.map((desc, index) => {
+                const alpha = Math.max(0.3, 1 - (index * 0.1)); // 항목이 많아질수록 투명도 조절
+                if (chartType === 'income') return `rgba(41, 128, 185, ${alpha})`;
+                if (chartType === 'all') return desc.startsWith('[수입]') ? `rgba(41, 128, 185, ${alpha})` : `rgba(192, 57, 43, ${alpha})`;
+                return `rgba(192, 57, 43, ${alpha})`; // 지출
+            });
+
+            // 4. 도넛 차트 생성
+            this.expenseChartObj = new Chart(canvasEl, {
+                type: 'doughnut',
+                data: {
+                    labels: sortedDescs,
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 1,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'right',
+                            labels: {
+                                font: { size: 10, family: "'Pretendard Variable', sans-serif" },
+                                boxWidth: 12
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed.toLocaleString() + '원';
+                                        const percentage = ((context.parsed / totalAmount) * 100).toFixed(1) + '%';
+                                        label += ` (${percentage})`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         },
 
         render() {
