@@ -101,61 +101,66 @@
         .settlement-bars { display: flex; width: 100%; justify-content: center; gap: 1px; height: 100%; align-items: flex-end; }
         .settlement-bar-inc, .settlement-bar-exp { width: 45%; min-height: 1px; border-radius: 2px 2px 0 0; }
         .settlement-bar-inc { background-color: var(--color-income); } .settlement-bar-exp { background-color: var(--color-expense); }
+        /* 10월, 11월, 12월 글씨 깨짐 방지 강제 고정 */
+        .settlement-month-label { font-size: 11px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
 
         /* =========================================
-           📱 모바일 최적화 (Responsive Design) 교정
+           📱 모바일 최적화 (대시보드 밀도 극대화)
            ========================================= */
         @media screen and (max-width: 768px) {
-            /* 1. 기본 레이아웃 여백 확보 */
-            body { padding: 10px; padding-bottom: 100px; }
-            h1 { font-size: 1.4em; margin-top: 40px; margin-bottom: 15px; }
-            .box { padding: 12px; margin-bottom: 12px; border-radius: 6px; }
-            .collapsible-header { font-size: 15px; padding: 4px 0; }
+            /* 전체 여백 대폭 축소 */
+            body { padding: 6px; padding-bottom: 80px; }
+            h1 { font-size: 1.2em; margin-top: 25px; margin-bottom: 10px; }
+            .box { padding: 10px; margin-bottom: 8px; border-radius: 6px; }
+            .collapsible-header { font-size: 13px; padding: 2px 0; }
             
-            /* 2. 상단/하단 네비게이션 접근성 강화 (스크롤 및 터치 영역 확대) */
-            .top-nav-bar { top: 10px; left: 10px; right: 10px; margin-bottom: 0; }
-            .history-btn { height: 34px; padding: 0 16px; font-size: 12px; }
+            .top-nav-bar { top: 8px; left: 8px; right: 8px; margin-bottom: 0; }
+            .history-btn { height: 30px; padding: 0 12px; font-size: 11px; }
             
-            .bottom-nav { bottom: 15px; gap: 6px; padding: 0 10px; overflow-x: auto; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
-            .bottom-nav::-webkit-scrollbar { display: none; } /* 스크롤바 숨김 */
-            .bottom-nav .std-btn, .bottom-nav select { flex-shrink: 0; height: 38px; padding: 0 12px; font-size: 13px; width: auto; }
+            .bottom-nav { bottom: 10px; gap: 4px; padding: 0 5px; overflow-x: auto; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+            .bottom-nav::-webkit-scrollbar { display: none; }
+            .bottom-nav .std-btn, .bottom-nav select { flex-shrink: 0; height: 34px; padding: 0 10px; font-size: 12px; width: auto; }
 
-            /* 3. 폼 입력 요소 찌그러짐 방지 (유연한 Wrap 적용) */
-            input[type="text"], input[type="number"], input[type="date"], select, .std-btn, textarea { height: 38px; font-size: 13px; }
-            .util-btn { height: 28px; padding: 0 10px; font-size: 11px; }
+            /* 폼 높이 및 글씨 크기 축소 */
+            input[type="text"], input[type="number"], input[type="date"], select, .std-btn, textarea { height: 30px; font-size: 12px; padding: 0 6px; }
+            .util-btn { height: 24px; padding: 0 8px; font-size: 10px; }
 
-            .mobile-row { flex-wrap: wrap !important; gap: 8px !important; margin-bottom: 10px !important; }
-            .mobile-row > * { flex: 1 1 45%; min-width: 130px !important; width: auto; }
-            .mobile-row .btn-fixed { flex: 1 1 100%; min-width: 100% !important; } /* 추가 버튼 등은 풀사이즈로 */
+            /* 한 줄에 데이터 압축 배치 */
+            .mobile-row { flex-wrap: wrap !important; gap: 4px !important; margin-bottom: 6px !important; }
+            .mobile-row > * { flex: 1 1 45%; min-width: 100px !important; width: auto; }
+            .mobile-row .btn-fixed { flex: 1 1 100%; min-width: 100% !important; } 
             
-            /* 입력 폼 순서 재배치 */
+            /* [개선] 데이터 관리 버튼 1열 완벽 정렬 */
+            .action-buttons { display: flex; flex-wrap: nowrap; gap: 4px; overflow-x: auto; width: 100%; padding-bottom: 2px; }
+            .action-buttons .std-btn { flex: 1; padding: 0 4px; font-size: 11px; white-space: nowrap; height: 32px; min-width: auto; }
+            
             #inputFormGroup { display: flex; flex-direction: column; }
             #inputFormGroup > .row-assets { order: 1; } #inputFormGroup > .row-date-repeat { order: 2; } #inputFormGroup > #repeatEndDateContainer { order: 3; } #inputFormGroup > .row-type-amount { order: 4; } #inputFormGroup > .row-desc-note { order: 5; } #inputFormGroup > .row-memo { order: 6; } #inputFormGroup > .row-custom { order: 7; } #inputFormGroup > .row-submit { order: 8; }
             
-            /* 4. 요약 박스(Summary Box) 2단 그리드 배치 */
+            /* 요약 박스 밀도 상향 */
             .hide-on-mobile { display: none !important; }
-            .summary-box { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 15px 5px; margin-bottom: 15px; }
-            .summary-box div { flex: 1 1 28%; min-width: 90px; text-align: center; padding: 0; line-height: 1.3; }
-            .summary-box div > span:last-child { display: block; margin-top: 4px; font-size: 12px; font-weight: bold; }
-            #sumBalance { font-size: 14px !important; }
+            .summary-box { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 10px 4px; margin-bottom: 10px; }
+            .summary-box div { flex: 1 1 28%; min-width: 80px; text-align: center; padding: 0; line-height: 1.2; font-size: 11px; }
+            .summary-box div > span:last-child { display: block; margin-top: 2px; font-size: 12px; font-weight: bold; }
+            #sumBalance { font-size: 13px !important; }
             
-            /* 5. 테이블 및 차트 글씨 크기 보정 */
-            .num-wrap { width: 70px; } 
-            table { font-size: 12px; } 
-            th, td { padding: 8px 6px; }
+            /* 테이블 및 차트 글자 축소 */
+            .num-wrap { width: 60px; } 
+            table { font-size: 11px; } 
+            th, td { padding: 6px 4px; }
             
-            .chart-row { font-size: 11px; margin-bottom: 6px; }
-            .chart-label { width: 85px; }
-            .chart-val { width: 120px; font-size: 12px; }
-            .chart-val-pct { width: 45px; font-size: 10px; margin-left: 4px; }
+            .chart-row { font-size: 10px; margin-bottom: 4px; }
+            .chart-label { width: 75px; }
+            .chart-val { width: 100px; font-size: 11px; }
+            .chart-val-pct { width: 40px; font-size: 9px; margin-left: 2px; }
 
-            .cal-day { min-height: 50px; padding: 3px; }
-            .cal-date { font-size: 11px; }
-            .cal-inc, .cal-exp { font-size: 10px; }
+            .cal-day { min-height: 40px; padding: 2px; }
+            .cal-date { font-size: 10px; }
+            .cal-inc, .cal-exp { font-size: 9px; }
             
-            .modal-content { margin: 15% auto; padding: 15px; width: 95%; }
-            .modal-header-nav { gap: 10px; margin-bottom: 12px; }
-            .modal-header-nav h2 { font-size: 16px; }
+            .modal-content { margin: 10% auto; padding: 12px; width: 95%; }
+            .modal-header-nav { gap: 10px; margin-bottom: 10px; }
+            .modal-header-nav h2 { font-size: 15px; margin-bottom: 0; }
         }
     </style>
 </head>
@@ -174,12 +179,12 @@
             데이터 관리 (결산/백업/복원) <span id="actionToggleIcon">▼</span>
         </div>
         <div id="actionButtonsContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div class="action-buttons flex-row">
-                <button class="std-btn bg-blue flex-1" onclick="UIManager.openYearlySettlement()">연도 결산</button>
-                <button class="std-btn bg-green flex-1" onclick="AppCtrl.exportToCSV()">CSV 변환</button>
-                <button class="std-btn bg-purple flex-1" onclick="AppCtrl.backupData()">데이터 백업</button>
+            <div class="action-buttons">
+                <button class="std-btn bg-blue" onclick="UIManager.openYearlySettlement()">연도 결산</button>
+                <button class="std-btn bg-green" onclick="AppCtrl.exportToCSV()">CSV 변환</button>
+                <button class="std-btn bg-purple" onclick="AppCtrl.backupData()">데이터 백업</button>
                 <input type="file" id="restoreInput" style="display:none;" accept=".json" onchange="AppCtrl.restoreData(event)">
-                <button class="std-btn bg-orange flex-1" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
+                <button class="std-btn bg-orange" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
             </div>
         </div>
     </div>
@@ -229,8 +234,8 @@
                 <input type="number" step="0.01" id="newAssetRate" placeholder="이율 (%)" class="flex-1">
             </div>
             <div class="flex-row mobile-row">
-                <div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:130px;"><span style="font-size:11px; color:var(--text-muted);">기준일자</span><input type="date" id="newAssetDate" style="width:100%;"></div>
-                <div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:130px;"><span style="font-size:11px; color:var(--text-muted);">만기일자</span><input type="date" id="newAssetMaturity" style="width:100%;"></div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:100px;"><span style="font-size:11px; color:var(--text-muted);">기준일자</span><input type="date" id="newAssetDate" style="width:100%;"></div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:100px;"><span style="font-size:11px; color:var(--text-muted);">만기일자</span><input type="date" id="newAssetMaturity" style="width:100%;"></div>
             </div>
             <div class="flex-row mobile-row">
                 <button id="submitAssetBtn" class="std-btn bg-green flex-1 btn-fixed" onclick="AppCtrl.addAsset()">자산 추가</button>
@@ -544,18 +549,18 @@
 
             let html = `
                 <div class="row-assets flex-row mobile-row" style="width: 100%;">
-                    <div class="flex-1" style="display:flex; gap:2px; min-width:130px;">
+                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
                         <select id="linkedAsset1" style="width:100%;" title="연동 자산 1">${assetOptions}</select>
                         <select id="linkedAssetOp1" style="width:45px; padding:0 4px;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
                     </div>
-                    <div class="flex-1" style="display:flex; gap:2px; align-items:flex-end; min-width:130px;">
+                    <div class="flex-1" style="display:flex; gap:2px; align-items:flex-end; min-width:100px;">
                         <select id="linkedAsset2" style="width:100%;" title="연동 자산 2 (옵션)">${assetOptions}</select>
                         <select id="linkedAssetOp2" style="width:45px; padding:0 4px;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
                     </div>
                 </div>
                 <div class="row-date-repeat flex-row mobile-row" style="width: 100%;">
-                    <input type="date" id="dateInput" required class="flex-1" style="min-width:130px;">
-                    <select id="repeatType" onchange="UIManager.toggleRepeatDate()" class="flex-1" style="min-width:130px;">
+                    <input type="date" id="dateInput" required class="flex-1" style="min-width:100px;">
+                    <select id="repeatType" onchange="UIManager.toggleRepeatDate()" class="flex-1" style="min-width:100px;">
                         <option value="none">반복 없음</option><option value="daily">매일</option><option value="monthly">매달</option><option value="yearly">매년</option>
                     </select>
                 </div>
@@ -564,12 +569,12 @@
                     <input type="date" id="repeatEndDate" style="width:100%; padding:0 8px;">
                 </div>
                 <div class="row-type-amount flex-row mobile-row" style="width: 100%;">
-                    <select id="typeInput" class="flex-1" style="min-width:130px;"><option value="expense">지출</option><option value="income">수입</option><option value="transfer">이체/상환</option></select>
-                    <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1" style="min-width:130px;">
+                    <select id="typeInput" class="flex-1" style="min-width:100px;"><option value="expense">지출</option><option value="income">수입</option><option value="transfer">이체/상환</option></select>
+                    <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1" style="min-width:100px;">
                 </div>
                 <div class="row-desc-note flex-row mobile-row" style="width: 100%;">
-                    <input type="text" id="descInput" list="descHistoryList" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:130px;">
-                    <input type="text" id="noteInput" list="noteHistoryList" placeholder="비고 (간단한 요약)" class="flex-1" style="min-width:130px;">
+                    <input type="text" id="descInput" list="descHistoryList" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
+                    <input type="text" id="noteInput" list="noteHistoryList" placeholder="비고 (간단한 요약)" class="flex-1" style="min-width:100px;">
                 </div>
                 <div class="row-memo" style="width: 100%; margin-bottom:10px;">
                     <div onclick="UIManager.toggleMemo()" style="cursor:pointer; font-size:12px; color:var(--text-title); font-weight:bold; display:flex; align-items:center;">
@@ -581,16 +586,16 @@
             `;
             if (DataStore.state.customCols.length > 0) {
                 html += `<div class="row-custom flex-row mobile-row" style="width: 100%;">`;
-                DataStore.state.customCols.forEach(col => { html += `<input type="text" id="customInput_${col.id}" placeholder="${Utils.escHtml(col.name)}" class="flex-1" style="min-width:130px;">`; });
+                DataStore.state.customCols.forEach(col => { html += `<input type="text" id="customInput_${col.id}" placeholder="${Utils.escHtml(col.name)}" class="flex-1" style="min-width:100px;">`; });
                 html += `</div>`;
             }
             html += `
                 <div class="row-submit flex-row" style="width: 100%; justify-content: space-between; align-items: center; margin-top: 5px;">
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px;">
                         <label class="checkbox-label" style="color:var(--text-muted); font-size:12px;"><input type="checkbox" id="excludeStatsOnlyInput"> 통계에서만 제외</label>
                         <label class="checkbox-label"><input type="checkbox" id="excludeInput"> 완전 제외 (자산+통계)</label>
                     </div>
-                    <div style="display:flex; gap:6px; flex:1; min-width: 150px; justify-content: flex-end;">
+                    <div style="display:flex; gap:6px; flex:1; min-width: 120px; justify-content: flex-end;">
                         <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1;">초기화</button>
                         <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">수정 취소</button>
                         <button id="submitBtn" class="std-btn bg-blue" onclick="AppCtrl.submitEntry()" style="flex:2;">내역 등록</button>
