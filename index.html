@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통합 자산 가계부 by JM</title>
+    
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="./icon-192x192.png">
+
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        /* === 테마 색상 변수 (CSS Variables) === */
+        :root {
+            --bg-main: #f4f4f9; --bg-box: #ffffff; --bg-sub: #fafafa; --bg-input: #ffffff;
+            --text-main: #333333; --text-title: #2c3e50; --text-muted: #7f8c8d;
+            --border-main: #dddddd; --border-input: #cccccc; --border-light: #eeeeee;
+            --color-income: #2980b9; --color-expense: #c0392b; --color-warning: #d35400;
+            --bg-table-head: #34495e; --text-table-head: #ffffff;
+            --bg-highlight: #e8f4f8; --border-highlight: #bce8f1;
+            --bg-carried: #fcf3cf; --bg-excluded: #f9f9f9; --bg-chart: #eeeeee;
+            --modal-overlay: rgba(0,0,0,0.6);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-main: #121212; --bg-box: #1e1e1e; --bg-sub: #252525; --bg-input: #2c2c2c;
+                --text-main: #e0e0e0; --text-title: #81c784; --text-muted: #95a5a6;
+                --border-main: #333333; --border-input: #555555; --border-light: #2a2a2a;
+                --color-income: #5dade2; --color-expense: #e74c3c; --color-warning: #f39c12;
+                --bg-table-head: #2c3e50; --text-table-head: #e0e0e0;
+                --bg-highlight: #1a252f; --border-highlight: #2c3e50;
+                --bg-carried: #3d3515; --bg-excluded: #222222; --bg-chart: #333333;
+                --modal-overlay: rgba(0,0,0,0.8);
+            }
+        }
+
+        body { font-family: "Pretendard Variable", sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; padding-bottom: 80px; transition: background-color 0.3s, color 0.3s; }
+        .container { max-width: 1000px; margin: auto; background: var(--bg-box); padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); position: relative; }
+        h1, h2, h3 { text-align: center; color: var(--text-title); }
+        h1 { margin-top: 30px; } * { box-sizing: border-box; } 
+        
+        .top-nav-bar { position: fixed; top: 20px; left: 20px; right: 20px; z-index: 990; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+        .history-btn { height: 32px; font-size: 12px; padding: 0 16px; border-radius: 16px; font-weight: bold; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; pointer-events: auto; backdrop-filter: blur(6px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .history-btn:disabled { cursor: not-allowed; opacity: 0.4 !important; background-color: var(--text-muted) !important; box-shadow: none; }
+        #undoBtn { background-color: rgba(230, 126, 34, 0.85); } #redoBtn { background-color: rgba(41, 128, 185, 0.85); }
+        .bottom-nav { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; z-index: 990; pointer-events: none; }
+        .bottom-nav .std-btn, .bottom-nav select { pointer-events: auto; height: 40px; padding: 0 16px; border-radius: 20px; font-size: 14px; font-weight: bold; background: rgba(255, 255, 255, 0.85); color: var(--text-title); border: 1px solid #b0b0b0; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin: 0; }
+        .bottom-nav select { appearance: none; text-align: center; cursor: pointer; }
+        @media (prefers-color-scheme: dark) { .bottom-nav .std-btn, .bottom-nav select { background: rgba(44, 44, 44, 0.85); color: #e0e0e0; border: 1px solid #777777; } }
+
+        .box { border: 1px solid var(--border-main); padding: 15px; border-radius: 8px; background: var(--bg-sub); margin-bottom: 20px; }
+        .collapsible-header { cursor: pointer; margin: 0; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: var(--text-title); padding: 4px 0; }
+        input, select, .std-btn, textarea { height: 36px; padding: 0 10px; font-size: 14px; border: 1px solid var(--border-input); border-radius: 4px; font-family: inherit; background-color: var(--bg-input); color: var(--text-main); }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-income); box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.2); }
+        .std-btn { background-color: #2c3e50; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .util-btn { height: 26px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-edit { background-color: #f39c12; } .btn-del { background-color: #e74c3c; } .btn-gray { background-color: #95a5a6; }
+        .flex-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; } .flex-1 { flex: 1; min-width: 120px; }
+        .bg-green { background-color: #27ae60; } .bg-purple { background-color: #8e44ad; } .bg-orange { background-color: #d35400; } .bg-blue { background-color: var(--color-income); }
+        .col-list { list-style: none; padding: 0; margin: 10px 0; max-height: 150px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 4px; }
+        .col-list li { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-light); background: var(--bg-box);}
+        .input-area { background: var(--bg-highlight); padding: 15px; border-radius: 8px; border: 1px solid var(--border-highlight); }
+        .checkbox-label { font-size: 13px; display: flex; align-items: center; font-weight: bold; color: var(--color-expense); cursor: pointer; }
+        .summary-box { display: flex; justify-content: space-around; background: var(--bg-sub); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; border: 1px solid var(--border-main); }
+        .text-blue { color: var(--color-income); } .text-red { color: var(--color-expense); } .text-gray { color: var(--text-muted); }
+        .num-wrap { display: inline-block; text-align: right; width: 85px; font-variant-numeric: tabular-nums; }
+        
+        .table-container { width: 100%; overflow-x: auto; border: 1px solid var(--border-main); border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--bg-box); }
+        th, td { border-bottom: 1px solid var(--border-main); border-right: 1px solid var(--border-light); padding: 8px 10px; text-align: center; white-space: nowrap; }
+        th { background-color: var(--bg-table-head); color: var(--text-table-head); position: sticky; top: 0; font-weight: normal;}
+        .excluded-row { background-color: var(--bg-excluded); color: var(--text-muted); }
+        .excluded-badge { font-size: 10px; background: var(--text-muted); color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
+        .carried-row { background-color: var(--bg-carried); font-weight: bold; }
+        .chart-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
+        .chart-label { width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chart-bar-wrap { flex: 1; background: var(--bg-chart); height: 14px; border-radius: 7px; margin: 0 10px; }
+        .chart-bar { height: 100%; width: 0%; transition: width 0.3s; }
+        .chart-val { display: flex; width: 135px; justify-content: flex-end; align-items: baseline; font-weight: bold; font-variant-numeric: tabular-nums; }
+        .chart-val-amt { flex: 1; text-align: right; } .chart-val-pct { width: 48px; text-align: right; font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: 4px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-light); border: 1px solid var(--border-light); border-radius: 4px; }
+        .cal-header { background: var(--bg-table-head); color: var(--text-table-head); text-align: center; font-size: 12px; padding: 6px 0; }
+        .cal-day { background: var(--bg-box); min-height: 60px; padding: 4px; display: flex; flex-direction: column; text-align: right; }
+        .cal-date { font-size: 11px; font-weight: bold; margin-bottom: 2px; text-align: left; }
+        .cal-date.sun { color: #e74c3c; } .cal-date.sat { color: #2980b9; } .cal-date.other-month { color: var(--text-muted); opacity: 0.5; }
+        .cal-inc { color: var(--color-income); font-size: 10px; font-weight: bold; letter-spacing: -0.5px; } .cal-exp { color: var(--color-expense); font-size: 10px; font-weight: bold; letter-spacing: -0.5px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--modal-overlay); overflow: auto; }
+        .modal-content { background-color: var(--bg-box); margin: 5% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 800px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .close-modal { color: var(--text-muted); float: right; font-size: 24px; font-weight: bold; cursor: pointer; line-height: 1; margin-top: -5px; }
+        .settlement-chart-container { display: flex; height: 200px; align-items: flex-end; gap: 4px; padding-top: 20px; border-bottom: 1px solid var(--border-main); margin-bottom: 15px; overflow-x: auto; }
+        .settlement-bar-group { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 30px; }
+        .settlement-bars { display: flex; width: 100%; justify-content: center; gap: 1px; height: 100%; align-items: flex-end; }
+        .settlement-bar-inc, .settlement-bar-exp { width: 45%; min-height: 1px; border-radius: 2px 2px 0 0; }
+        .settlement-bar-inc { background-color: var(--color-income); } .settlement-bar-exp { background-color: var(--color-expense); }
+
+        /* === 모바일 최적화 === */
+        @media screen and (max-width: 768px) {
+            body { padding: 8px; padding-bottom: 80px; }
+            h1 { font-size: 1.3em; margin-top: 35px; margin-bottom: 10px; }
+            .top-nav-bar { top: 10px; left: 10px; right: 10px; margin-bottom: 0; }
+            .bottom-nav { bottom: 15px; gap: 4px; padding: 0; }
+            .bottom-nav .std-btn, .bottom-nav select { height: 36px; padding: 0 12px; font-size: 13px; width: auto; }
+            .mobile-row { flex-wrap: nowrap !important; gap: 6px !important; margin-bottom: 6px !important; }
+            .mobile-row > * { flex: 1; min-width: 0 !important; width: 100%; }
+            .mobile-row .btn-fixed { flex: none !important; width: 60px; }
+            #inputFormGroup { display: flex; flex-direction: column; }
+            #inputFormGroup > .row-assets { order: 1; } #inputFormGroup > .row-date-repeat { order: 2; } #inputFormGroup > #repeatEndDateContainer { order: 3; } #inputFormGroup > .row-type-amount { order: 4; } #inputFormGroup > .row-desc-note { order: 5; } #inputFormGroup > .row-memo { order: 6; } #inputFormGroup > .row-custom { order: 7; } #inputFormGroup > .row-submit { order: 8; }
+            .hide-on-mobile { display: none !important; }
+            .summary-box { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 2px; padding: 10px 4px; font-size: 10px; margin-bottom: 10px; align-items: center; }
+            .summary-box div { flex: 1; padding: 0; white-space: nowrap; letter-spacing: -0.5px; }
+            .summary-box div > span:last-child { display: block; margin-top: 3px; font-size: 11px; font-weight: bold; }
+            .num-wrap { width: 65px; } table { font-size: 11px; } th, td { padding: 6px 4px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-nav-bar">
+    <button id="undoBtn" class="history-btn" onclick="DataStore.undo()" disabled title="방금 전 데이터 변동 취소">↩ 취소</button>
+    <button id="redoBtn" class="history-btn" onclick="DataStore.redo()" disabled title="취소 내역 복구">↪ 재실행</button>
+</div>
+
+<div class="container">
+    <h1>통합 자산 가계부 by JM</h1>
+
+    <div class="box">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('actionButtonsContainer', 'actionToggleIcon')">
+            데이터 관리 (결산/백업/복원) <span id="actionToggleIcon">▼</span>
+        </div>
+        <div id="actionButtonsContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+            <div class="action-buttons">
+                <button class="std-btn bg-blue" onclick="UIManager.openYearlySettlement()">연도 결산</button>
+                <button class="std-btn bg-green" onclick="AppCtrl.exportToCSV()">CSV 변환</button>
+                <button class="std-btn bg-purple" onclick="AppCtrl.backupData()">데이터 백업</button>
+                <input type="file" id="restoreInput" style="display:none;" accept=".json" onchange="AppCtrl.restoreData(event)">
+                <button class="std-btn bg-orange" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('customColContent', 'colToggleIcon')">
+            상세 내역 (열) 관리 <span id="colToggleIcon">▼</span>
+        </div>
+        <div id="customColContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+            <div class="flex-row mobile-row" style="margin-bottom: 10px;">
+                <input type="text" id="newColName" placeholder="새 항목 이름 (예: 결제수단)" class="flex-1">
+                <button class="std-btn btn-fixed" onclick="AppCtrl.addColumn()">추가</button>
+            </div>
+            <ul class="col-list" id="customColList"></ul>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('monthlyMemoContainer', 'monthlyMemoToggleIcon')">
+            <span id="monthlyMemoTitle">월간 메모</span>
+            <div>
+                <span id="monthlyMemoIndicator" style="color:var(--color-expense); font-size:12px; margin-right:8px; display:none;">[메모 있음]</span>
+                <span id="monthlyMemoToggleIcon">▼</span>
+            </div>
+        </div>
+        <div id="monthlyMemoContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+            <div id="monthlyMemoNotAvailable" style="display:none; color:var(--text-muted); font-size:12px; text-align:center; padding: 10px 0;">
+                특정 연도와 월을 필터에서 선택해야 해당 월의 메모를 작성할 수 있습니다.
+            </div>
+            <div id="monthlyMemoEditArea">
+                <textarea id="monthlyMemoTextarea" style="width:100%; height:100px; padding:10px; border:1px solid var(--border-input); border-radius:4px; font-family:inherit; resize:vertical; background-color:var(--bg-input); color:var(--text-main);" placeholder="이번 달의 예산, 목표, 특이사항 등을 기록하세요." oninput="AppCtrl.saveMonthlyMemo()"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('assetContainer', 'assetToggleIcon')">
+            자산 및 부채 현황 <span id="assetToggleIcon">▼</span>
+        </div>
+        <div id="assetContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+            <div class="flex-row mobile-row">
+                <select id="newAssetType" class="flex-1"><option value="asset">순자산</option><option value="liability">부채</option></select>
+                <input type="text" id="newAssetName" placeholder="자산명 (예: 대출)" class="flex-1">
+            </div>
+            <div class="flex-row mobile-row">
+                <input type="number" id="newAssetBalance" placeholder="초기 잔액 (원)" class="flex-1">
+                <input type="number" step="0.01" id="newAssetRate" placeholder="이율 (%)" class="flex-1">
+            </div>
+            <div class="flex-row mobile-row">
+                <div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:11px; color:var(--text-muted);">기준일자</span><input type="date" id="newAssetDate" style="width:100%;"></div>
+                <div style="flex:1; display:flex; flex-direction:column; gap:2px;"><span style="font-size:11px; color:var(--text-muted);">만기일자</span><input type="date" id="newAssetMaturity" style="width:100%;"></div>
+            </div>
+            <div class="flex-row mobile-row">
+                <button id="submitAssetBtn" class="std-btn bg-green flex-1" onclick="AppCtrl.addAsset()">자산 추가</button>
+                <button id="cancelAssetEditBtn" class="std-btn btn-gray flex-1" onclick="UIManager.cancelAssetEdit()" style="display:none;">취소</button>
+            </div>
+            <div id="assetList" style="margin-top: 15px;"></div>
+            <div style="text-align: right; margin-top: 10px; font-size: 13px; color:var(--text-muted);">총 순자산: <span id="totalNetWorth" style="font-weight: bold; font-size: 16px; color:var(--text-main);">0</span> 원</div>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('calendarContainer', 'calendarToggleIcon')">
+            달력 <span id="calendarToggleIcon">▼</span>
+        </div>
+        <div id="calendarContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+            <div id="calendarUI"></div>
+        </div>
+    </div>
+    
+    <div class="box">
+        <div class="collapsible-header" onclick="UIManager.toggleSection('inputFormContainer', 'inputToggleIcon')">
+            가계부 내역 입력 <span id="inputToggleIcon">▼</span>
+        </div>
+        <div id="inputFormContainer" class="input-area" style="display: none; margin-top: 10px;">
+            <div id="inputFormGroup"></div>
+        </div>
+    </div>
+
+    <div class="box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 id="chartTitle" style="margin: 0; color: var(--text-title); font-size: 15px;">전체 기간 지출 통계</h3>
+            <select id="chartTypeSelect" onchange="UIManager.render()" style="width: auto;">
+                <option value="expense">지출</option><option value="income">수입</option><option value="all">수입/지출 통합</option>
+            </select>
+        </div>
+        <div id="expenseChart">데이터가 없습니다.</div>
+    </div>
+
+    <div class="summary-box">
+        <div>이월<span class="hide-on-mobile"> 잔액</span><br><span class="text-gray" id="carriedBalance">0</span></div>
+        <div><span id="periodLabelInc" class="hide-on-mobile">해당 기간 </span>수입<br><span class="text-blue" id="sumIncome">0</span></div>
+        <div><span id="periodLabelExp" class="hide-on-mobile">해당 기간 </span>지출<br><span class="text-red" id="sumExpense">0</span></div>
+        <div><span id="periodLabelNet" class="hide-on-mobile">해당 기간 </span>잔액<br><span id="sumNetBalance">0</span></div>
+        <div><span id="sumBalanceText">최종 잔액</span><br><span id="sumBalance" style="color:var(--text-title);">0</span></div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+        <h2 id="detailTitle" style="margin: 0; font-size: 16px;">상세 내역</h2>
+    </div>
+    <div style="margin-bottom: 10px; display: flex; gap: 8px;">
+        <select id="searchYearFilter" onchange="UIManager.render()" style="width: 100px; height: 36px; padding: 0 5px; font-size: 13px;"></select>
+        <input type="text" id="searchInput" placeholder="내용, 금액 검색..." oninput="UIManager.render()" style="flex: 1; height:36px; padding:0 10px;">
+    </div>
+    
+    <div class="table-container">
+        <table>
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <button class="std-btn" onclick="UIManager.changeMonth(-1)" title="이전 달">◀</button>
+    <select id="yearFilter" onchange="UIManager.render()"></select>
+    <select id="monthFilter" onchange="UIManager.render()">
+        <option value="all">전체 월</option>
+        <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
+        <option value="04">4월</option><option value="05">5월</option><option value="06">6월</option>
+        <option value="07">7월</option><option value="08">8월</option><option value="09">9월</option>
+        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+    </select>
+    <button class="std-btn" onclick="UIManager.changeMonth(1)" title="다음 달">▶</button>
+    <button class="std-btn btn-current" onclick="UIManager.goToCurrentMonth()" title="현재 달로 이동">현재</button>
+</div>
+
+<div id="settlementModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="UIManager.closeYearlySettlement()">&times;</span>
+        <div class="modal-header-nav"><h2 id="settlementYearLabel">0000년 결산</h2></div>
+        <div id="settlementChartContainer"></div>
+        <div style="text-align:center; font-size:11px; margin-bottom:15px;"><span style="color:var(--color-income);">■ 총 수입</span> <span style="color:var(--color-expense); margin-left:10px;">■ 총 지출</span></div>
+        <div class="table-container" style="max-height: 250px;">
+            <table><thead><tr><th>월</th><th>수입</th><th>지출</th><th>순수익</th></tr></thead><tbody id="settlementTbody"></tbody></table>
+        </div>
+        <div class="modal-footer-nav">
+            <button class="std-btn" onclick="UIManager.changeSettlementYear(-1)">◀ 이전 연도</button>
+            <button class="std-btn" onclick="UIManager.changeSettlementYear(1)">다음 연도 ▶</button>
+        </div>
+    </div>
+</div>
+
+<datalist id="descHistoryList"></datalist>
+<datalist id="noteHistoryList"></datalist>
+
+<script>
+    // ==========================================
+    // 1. Utilities
+    // ==========================================
+    const Utils = {
+        escHtml: (str) => {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        },
+        getLocalYYYYMMDD: (date) => {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        },
+        getTodayString: () => Utils.getLocalYYYYMMDD(new Date())
+    };
+
+    // ==========================================
+    // 2. DataStore
+    // ==========================================
+    const DataStore = {
+        state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {} },
+        history: { stack: [], pointer: -1, MAX: 10 },
+        
+        init() {
+            this.state.entries = JSON.parse(localStorage.getItem('accountBook_v2')) || [];
+            this.state.customCols = JSON.parse(localStorage.getItem('accountCols')) || [];
+            this.state.assets = JSON.parse(localStorage.getItem('accountAssets')) || [];
+            this.state.recurringTasks = JSON.parse(localStorage.getItem('accountRecurring_v2')) || [];
+            this.state.monthlyMemos = JSON.parse(localStorage.getItem('accountMonthlyMemos')) || {};
+            
+            if(this.state.entries.length === 0 && localStorage.getItem('accountBook')) {
+                this.state.entries = JSON.parse(localStorage.getItem('accountBook'));
+                this.save();
+            }
+            this.runMigration();
+            this.pushState();
+        },
+
+        runMigration() {
+            let changed = false;
+            const oldNoteColIndex = this.state.customCols.findIndex(c => c.name === '비고' || c.name === '기타');
+            if (oldNoteColIndex !== -1) {
+                const oldColId = this.state.customCols[oldNoteColIndex].id;
+                this.state.entries.forEach(e => {
+                    if (e.customData && e.customData[oldColId] && !e.note) {
+                        e.note = e.customData[oldColId]; delete e.customData[oldColId]; changed = true;
+                    }
+                });
+                this.state.customCols.splice(oldNoteColIndex, 1);
+                changed = true;
+            }
+            this.state.entries.forEach(e => {
+                if (e.amount === undefined) { e.amount = Math.max(e.income || 0, e.expense || 0); changed = true; }
+                if (e.linkedAsset && !e.linkedAsset1) {
+                    e.linkedAsset1 = e.linkedAsset;
+                    const ast = this.state.assets.find(a => a.id === e.linkedAsset);
+                    if (ast) e.linkedAssetOp1 = (ast.type === 'asset') ? (e.income > 0 ? '+' : '-') : (e.expense > 0 ? '+' : '-');
+                    else e.linkedAssetOp1 = '-';
+                    delete e.linkedAsset; changed = true;
+                }
+                if(e.excludeStatsOnly === undefined) { e.excludeStatsOnly = false; changed = true; }
+            });
+            if (changed) this.save();
+        },
+
+        save() {
+            const optimizedEntries = this.state.entries.map(e => {
+                const opt = { ...e };
+                if (!opt.note) delete opt.note; if (!opt.memo) delete opt.memo;
+                if (!opt.linkedAsset1) { delete opt.linkedAsset1; delete opt.linkedAssetOp1; }
+                if (!opt.linkedAsset2) { delete opt.linkedAsset2; delete opt.linkedAssetOp2; }
+                if (!opt.exclude) delete opt.exclude; if (!opt.excludeStatsOnly) delete opt.excludeStatsOnly;
+                if (!opt.income) delete opt.income; if (!opt.expense) delete opt.expense;
+                if (opt.customData) {
+                    for (let key in opt.customData) if (!opt.customData[key]) delete opt.customData[key];
+                    if (Object.keys(opt.customData).length === 0) delete opt.customData;
+                }
+                return opt;
+            });
+            try {
+                localStorage.setItem('accountBook_v2', JSON.stringify(optimizedEntries));
+                localStorage.setItem('accountAssets', JSON.stringify(this.state.assets));
+                localStorage.setItem('accountCols', JSON.stringify(this.state.customCols));
+                localStorage.setItem('accountRecurring_v2', JSON.stringify(this.state.recurringTasks));
+                localStorage.setItem('accountMonthlyMemos', JSON.stringify(this.state.monthlyMemos));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업(JSON) 후 오래된 내역을 삭제하세요.');
+            }
+        },
+
+        pushState() {
+            this.history.stack = this.history.stack.slice(0, this.history.pointer + 1);
+            if (this.history.stack.length >= this.history.MAX) this.history.stack.shift();
+            else this.history.pointer++;
+            
+            this.history.stack.push(JSON.parse(JSON.stringify(this.state)));
+            UIManager.updateHistoryUI();
+        },
+
+        undo() {
+            if (this.history.pointer > 0) {
+                this.history.pointer--;
+                this.restoreStateFromHistory(this.history.stack[this.history.pointer]);
+            }
+        },
+
+        redo() {
+            if (this.history.pointer < this.history.stack.length - 1) {
+                this.history.pointer++;
+                this.restoreStateFromHistory(this.history.stack[this.history.pointer]);
+            }
+        },
+
+        restoreStateFromHistory(stateObj) {
+            this.state = JSON.parse(JSON.stringify(stateObj));
+            this.save();
+            UIManager.renderAll();
+            UIManager.updateHistoryUI();
+        }
+    };
+
+    // ==========================================
+    // 3. UIManager
+    // ==========================================
+    const UIManager = {
+        currentEditId: null,
+        currentAssetEditId: null,
+        currentSettlementYear: null,
+
+        initFilters() {
+            const yearSelect = document.getElementById('yearFilter');
+            const searchYearSelect = document.getElementById('searchYearFilter');
+            const currentYear = new Date().getFullYear();
+            let optionsHtml = '<option value="all">전체 연도</option>';
+            for(let i = 2000; i <= 2100; i++) optionsHtml += `<option value="${i}" ${i === currentYear ? 'selected' : ''}>${i}년</option>`;
+            yearSelect.innerHTML = optionsHtml;
+            if(searchYearSelect) searchYearSelect.innerHTML = optionsHtml;
+            document.getElementById('monthFilter').value = String(new Date().getMonth() + 1).padStart(2, '0');
+        },
+
+        renderAll() { this.renderColManagement(); this.renderInputForm(); this.render(); },
+
+        toggleSection(containerId, iconId) {
+            const content = document.getElementById(containerId);
+            const icon = document.getElementById(iconId);
+            if(content.style.display === 'none') {
+                content.style.display = 'block'; icon.innerText = '▲';
+                if (containerId === 'monthlyMemoContainer') document.getElementById('monthlyMemoIndicator').style.display = 'none';
+            } else {
+                content.style.display = 'none'; icon.innerText = '▼';
+                if (containerId === 'monthlyMemoContainer') this.checkMonthlyMemoIndicator();
+            }
+        },
+
+        toggleMemo() {
+            const memoEl = document.getElementById('memoInput');
+            const iconEl = document.getElementById('memoToggleIcon');
+            if (memoEl.style.display === 'none') { memoEl.style.display = 'block'; iconEl.innerText = '▼'; } 
+            else { memoEl.style.display = 'none'; iconEl.innerText = '▶'; }
+        },
+
+        checkMemoContent() {
+            const memoEl = document.getElementById('memoInput');
+            const indEl = document.getElementById('memoIndicator');
+            if (memoEl && indEl) indEl.style.display = (memoEl.value.trim().length > 0) ? 'inline' : 'none';
+        },
+
+        checkMonthlyMemoIndicator() {
+            const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
+            const hasMemo = DataStore.state.monthlyMemos[`${yf}-${mf}`]?.trim().length > 0;
+            const isHidden = document.getElementById('monthlyMemoContainer').style.display === 'none';
+            document.getElementById('monthlyMemoIndicator').style.display = (hasMemo && isHidden) ? 'inline' : 'none';
+        },
+
+        syncMonthlyMemoUI() {
+            const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
+            const memoTitle = document.getElementById('monthlyMemoTitle');
+            const editArea = document.getElementById('monthlyMemoEditArea');
+            const notAvail = document.getElementById('monthlyMemoNotAvailable');
+            const textarea = document.getElementById('monthlyMemoTextarea');
+            
+            if (yf !== 'all' && mf !== 'all') {
+                memoTitle.innerText = `${yf}년 ${parseInt(mf)}월 메모`;
+                editArea.style.display = 'block'; notAvail.style.display = 'none';
+                textarea.value = DataStore.state.monthlyMemos[`${yf}-${mf}`] || '';
+            } else {
+                memoTitle.innerText = '월간 메모'; editArea.style.display = 'none'; notAvail.style.display = 'block'; textarea.value = '';
+            }
+            this.checkMonthlyMemoIndicator();
+        },
+
+        updateHistoryUI() {
+            const undoBtn = document.getElementById('undoBtn'); const redoBtn = document.getElementById('redoBtn');
+            if (undoBtn && redoBtn) {
+                undoBtn.disabled = DataStore.history.pointer <= 0;
+                redoBtn.disabled = DataStore.history.pointer >= DataStore.history.stack.length - 1;
+            }
+        },
+
+        renderColManagement() {
+            const list = document.getElementById('customColList');
+            list.innerHTML = DataStore.state.customCols.map(col => `
+                <li>
+                    <input type="text" value="${Utils.escHtml(col.name)}" onchange="AppCtrl.updateColName('${Utils.escHtml(col.id)}', this.value)">
+                    <button class="util-btn btn-del" onclick="AppCtrl.deleteCol('${Utils.escHtml(col.id)}')">삭제</button>
+                </li>
+            `).join('');
+        },
+
+        renderInputForm() {
+            const container = document.getElementById('inputFormGroup');
+            let assetOptions = '<option value="">자산 선택 안함</option>';
+            DataStore.state.assets.forEach(a => { assetOptions += `<option value="${Utils.escHtml(a.id)}">${Utils.escHtml(a.type === 'liability' ? '[부채]' : '[자산]')} ${Utils.escHtml(a.name)}</option>`; });
+
+            let html = `
+                <div class="row-assets flex-row mobile-row" style="width: 100%;">
+                    <div class="flex-1" style="display:flex; gap:2px;">
+                        <select id="linkedAsset1" style="width:100%;" title="연동 자산 1">${assetOptions}</select>
+                        <select id="linkedAssetOp1" style="width:45px; padding:0 4px;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
+                    </div>
+                    <div class="flex-1" style="display:flex; gap:2px; align-items:flex-end;">
+                        <select id="linkedAsset2" style="width:100%;" title="연동 자산 2 (옵션)">${assetOptions}</select>
+                        <select id="linkedAssetOp2" style="width:45px; padding:0 4px;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
+                    </div>
+                </div>
+                <div class="row-date-repeat flex-row mobile-row" style="width: 100%;">
+                    <input type="date" id="dateInput" required class="flex-1">
+                    <select id="repeatType" onchange="UIManager.toggleRepeatDate()" class="flex-1">
+                        <option value="none">반복 없음</option><option value="daily">매일</option><option value="monthly">매달</option><option value="yearly">매년</option>
+                    </select>
+                </div>
+                <div id="repeatEndDateContainer" style="display:none; width: 100%; margin-bottom:10px;">
+                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:2px;">반복 종료일</span>
+                    <input type="date" id="repeatEndDate" style="width:100%; padding:0 8px;">
+                </div>
+                <div class="row-type-amount flex-row mobile-row" style="width: 100%;">
+                    <select id="typeInput" class="flex-1"><option value="expense">지출</option><option value="income">수입</option><option value="transfer">이체/상환</option></select>
+                    <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1">
+                </div>
+                <div class="row-desc-note flex-row mobile-row" style="width: 100%;">
+                    <input type="text" id="descInput" list="descHistoryList" placeholder="내용 (예: 식비)" required class="flex-1">
+                    <input type="text" id="noteInput" list="noteHistoryList" placeholder="비고 (간단한 요약)" class="flex-1">
+                </div>
+                <div class="row-memo" style="width: 100%; margin-bottom:10px;">
+                    <div onclick="UIManager.toggleMemo()" style="cursor:pointer; font-size:12px; color:var(--text-title); font-weight:bold; display:flex; align-items:center;">
+                        <span id="memoToggleIcon" style="margin-right:5px; margin-top:1px;">▶</span> 해당 항목 상세 메모 (옵션)
+                        <span id="memoIndicator" style="color:var(--color-expense); margin-left:8px; display:none; font-size:11px;">[메모 기록됨]</span>
+                    </div>
+                    <textarea id="memoInput" style="display:none; width:100%; height:60px; margin-top:6px; padding:8px; border:1px solid var(--border-input); border-radius:4px; font-family:inherit; resize:vertical; background-color:var(--bg-input); color:var(--text-main);" placeholder="상세한 메모를 남겨보세요." oninput="UIManager.checkMemoContent()"></textarea>
+                </div>
+            `;
+            if (DataStore.state.customCols.length > 0) {
+                html += `<div class="row-custom flex-row mobile-row" style="width: 100%;">`;
+                DataStore.state.customCols.forEach(col => { html += `<input type="text" id="customInput_${col.id}" placeholder="${Utils.escHtml(col.name)}" class="flex-1">`; });
+                html += `</div>`;
+            }
+            html += `
+                <div class="row-submit flex-row" style="width: 100%; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label class="checkbox-label" style="color:var(--text-muted); font-size:12px;"><input type="checkbox" id="excludeStatsOnlyInput"> 통계에서만 제외</label>
+                        <label class="checkbox-label"><input type="checkbox" id="excludeInput"> 완전 제외 (자산+통계)</label>
+                    </div>
+                    <div style="display:flex; gap:6px; flex:1; justify-content: flex-end;">
+                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1;">초기화</button>
+                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">수정 취소</button>
+                        <button id="submitBtn" class="std-btn bg-blue" onclick="AppCtrl.submitEntry()" style="flex:2;">내역 등록</button>
+                    </div>
+                </div>
+                <div id="recurringListContainer" style="width:100%;"></div>
+            `;
+            
+            let existingDate = document.getElementById('dateInput')?.value;
+            container.innerHTML = html;
+            if(!this.currentEditId) {
+                if(!existingDate) document.getElementById('dateInput').valueAsDate = new Date();
+                else document.getElementById('dateInput').value = existingDate;
+            }
+            this.renderRecurringTasks();
+        },
+
+        toggleRepeatDate() {
+            const type = document.getElementById('repeatType').value;
+            const container = document.getElementById('repeatEndDateContainer');
+            const endInput = document.getElementById('repeatEndDate');
+            if(type !== 'none') {
+                container.style.display = 'block';
+                if(!endInput.value) { let d = new Date(); d.setFullYear(d.getFullYear() + 1); endInput.valueAsDate = d; }
+            } else container.style.display = 'none';
+        },
+
+        clearInputs() {
+            document.getElementById('descInput').value = ''; document.getElementById('amountInput').value = '0';
+            document.getElementById('excludeInput').checked = false; document.getElementById('excludeStatsOnlyInput').checked = false;
+            document.getElementById('repeatType').value = 'none';
+            document.getElementById('linkedAsset1').value = ''; document.getElementById('linkedAssetOp1').value = '-';
+            document.getElementById('linkedAsset2').value = ''; document.getElementById('linkedAssetOp2').value = '+';
+            if(document.getElementById('noteInput')) document.getElementById('noteInput').value = '';
+            if(document.getElementById('memoInput')) {
+                document.getElementById('memoInput').value = ''; document.getElementById('memoInput').style.display = 'none';
+                document.getElementById('memoToggleIcon').innerText = '▶'; document.getElementById('memoIndicator').style.display = 'none';
+            }
+            this.toggleRepeatDate();
+            DataStore.state.customCols.forEach(col => { const input = document.getElementById(`customInput_${col.id}`); if(input) input.value = ''; });
+        },
+
+        renderRecurringTasks() {
+            let container = document.getElementById('recurringListContainer');
+            if (!container) return;
+            if (DataStore.state.recurringTasks.length === 0) { container.innerHTML = ''; return; }
+            let html = '<div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-highlight); width:100%;"><strong style="font-size:12px; color:var(--text-title);">[대기 중인 자동 예약]</strong><ul style="list-style:none; padding:0; margin:5px 0 0 0; font-size:11px;">';
+            DataStore.state.recurringTasks.forEach(t => {
+                const rType = t.repeatType === 'daily' ? '매일' : (t.repeatType === 'monthly' ? '매달' : '매년');
+                html += `<li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; background:var(--bg-box); padding:6px; border-radius:4px; border:1px solid var(--border-light);">
+                    <span>🗓️ ${Utils.escHtml(t.nextDate)} <strong>${Utils.escHtml(t.desc)}</strong> (${(t.amount||0).toLocaleString()}원, ${rType})</span>
+                    <button class="util-btn btn-del" onclick="AppCtrl.deleteRecurring('${Utils.escHtml(t.id)}')">취소</button>
+                </li>`;
+            });
+            html += '</ul></div>';
+            container.innerHTML = html;
+        },
+
+        updateDescDatalist() {
+            const descList = document.getElementById('descHistoryList'); const noteList = document.getElementById('noteHistoryList');
+            if(descList) {
+                const uniqueDescs = [...new Set([...DataStore.state.entries].reverse().map(e => e.desc).filter(Boolean))];
+                descList.innerHTML = uniqueDescs.map(desc => `<option value="${Utils.escHtml(desc)}">`).join('');
+            }
+            if(noteList) {
+                const uniqueNotes = [...new Set([...DataStore.state.entries].reverse().map(e => e.note).filter(Boolean))];
+                noteList.innerHTML = uniqueNotes.map(note => `<option value="${Utils.escHtml(note)}">`).join('');
+            }
+        },
+
+        cancelAssetEdit() {
+            this.currentAssetEditId = null;
+            document.getElementById('newAssetType').value = 'asset'; document.getElementById('newAssetName').value = '';
+            document.getElementById('newAssetBalance').value = ''; document.getElementById('newAssetDate').value = '';
+            document.getElementById('newAssetMaturity').value = ''; document.getElementById('newAssetRate').value = '';
+            document.getElementById('submitAssetBtn').innerText = '자산 추가'; document.getElementById('cancelAssetEditBtn').style.display = 'none';
+        },
+
+        calculateAndRenderAssets() {
+            let totalAsset = 0; let totalLiability = 0;
+            const assetMap = {};
+            DataStore.state.assets.forEach(a => { assetMap[a.id] = { ...a, currentBalance: a.baseBalance || 0, lastUpdated: a.inputDate || '기록없음' }; });
+
+            DataStore.state.entries.forEach(e => {
+                if (!e.exclude) {
+                    const amt = (e.type === 'transfer') ? (e.amount || 0) : ((e.income > 0) ? e.income : (e.expense || 0));
+                    const safeDate = e.date || '';
+                    if (e.linkedAsset1 && assetMap[e.linkedAsset1]) {
+                        assetMap[e.linkedAsset1].currentBalance += (e.linkedAssetOp1 === '+' ? amt : -amt);
+                        if (safeDate && (assetMap[e.linkedAsset1].lastUpdated === '기록없음' || safeDate > assetMap[e.linkedAsset1].lastUpdated)) assetMap[e.linkedAsset1].lastUpdated = safeDate;
+                    }
+                    if (e.linkedAsset2 && assetMap[e.linkedAsset2]) {
+                        assetMap[e.linkedAsset2].currentBalance += (e.linkedAssetOp2 === '+' ? amt : -amt);
+                        if (safeDate && (assetMap[e.linkedAsset2].lastUpdated === '기록없음' || safeDate > assetMap[e.linkedAsset2].lastUpdated)) assetMap[e.linkedAsset2].lastUpdated = safeDate;
+                    }
+                }
+            });
+
+            const listEl = document.getElementById('assetList');
+            if (DataStore.state.assets.length === 0) {
+                listEl.innerHTML = '<p style="text-align:center; font-size:12px; color:var(--text-muted); margin:0;">등록된 자산/부채가 없습니다.</p>';
+                document.getElementById('totalNetWorth').innerText = '0';
+                return;
+            }
+
+            let html = `<div class="table-container"><table><thead><tr><th style="width: 40px;">분류</th><th>자산명</th><th style="text-align: right; padding-right: 15px;">잔액</th><th style="width: 80px;">관리</th></tr></thead><tbody>`;
+            DataStore.state.assets.forEach(a => {
+                const cal = assetMap[a.id]; const isLia = cal.type === 'liability';
+                if (isLia) totalLiability += cal.currentBalance; else totalAsset += cal.currentBalance;
+                let meta = `기준: ${cal.inputDate || '-'}`; if (cal.maturityDate) meta += ` | 만기: ${cal.maturityDate}`;
+                if (cal.rate > 0) meta += ` | ${cal.rate}%`; meta += ` | <span style="color:var(--color-warning); font-weight:bold;">최근: ${cal.lastUpdated}</span>`;
+                html += `<tr>
+                    <td><span style="font-size:11px; font-weight:bold; color:${isLia ? 'var(--color-expense)' : 'var(--color-income)'};">${isLia ? '부채' : '자산'}</span></td>
+                    <td style="text-align: left;"><div style="font-weight: bold; color: var(--text-title);">${Utils.escHtml(cal.name)}</div><div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${meta}</div></td>
+                    <td class="${isLia ? 'text-red' : 'text-blue'}" style="text-align: right; padding-right: 15px;"><span style="font-weight: bold; font-variant-numeric: tabular-nums;">${cal.currentBalance.toLocaleString()}</span></td>
+                    <td style="white-space: nowrap;"><button class="util-btn btn-edit" onclick="AppCtrl.editAsset('${Utils.escHtml(a.id)}')">수정</button> <button class="util-btn btn-del" onclick="AppCtrl.deleteAsset('${Utils.escHtml(a.id)}')">삭제</button></td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            listEl.innerHTML = html;
+            document.getElementById('totalNetWorth').innerText = (totalAsset - totalLiability).toLocaleString();
+        },
+
+        renderCalendar() {
+            const calDiv = document.getElementById('calendarUI');
+            const yearStr = document.getElementById('yearFilter').value; const monthStr = document.getElementById('monthFilter').value;
+            const searchInput = document.getElementById('searchInput'); const isSearchActive = searchInput && searchInput.value.trim().length > 0;
+
+            if (yearStr === 'all' || monthStr === 'all' || isSearchActive) {
+                calDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px; margin: 15px 0;">특정 연도와 월을 선택해야 볼 수 있습니다.</p>'; return;
+            }
+
+            const year = parseInt(yearStr); const month = parseInt(monthStr);
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const lastDate = new Date(year, month, 0).getDate();
+            const prevLastDate = new Date(year, month - 1, 0).getDate();
+
+            const dailyData = {};
+            DataStore.state.entries.forEach(e => {
+                if (!e.exclude && !e.excludeStatsOnly && e.type !== 'transfer' && e.date?.startsWith(`${yearStr}-${monthStr}`)) {
+                    const day = parseInt(e.date.slice(8, 10), 10);
+                    if (!dailyData[day]) dailyData[day] = { inc: 0, exp: 0 };
+                    if (e.income > 0) dailyData[day].inc += e.income; if (e.expense > 0) dailyData[day].exp += e.expense;
+                }
+            });
+
+            let html = '<div class="calendar-grid">';
+            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => html += `<div class="cal-header">${d}</div>`);
+            let currentDay = 1; let nextMonthDay = 1;
+            for (let i = 0; i < 42; i++) {
+                if (i < firstDay) html += `<div class="cal-day"><span class="cal-date other-month">${prevLastDate - firstDay + i + 1}</span></div>`;
+                else if (currentDay <= lastDate) {
+                    let dClass = (i % 7 === 0) ? 'sun' : ((i % 7 === 6) ? 'sat' : '');
+                    let dataHtml = '';
+                    if (dailyData[currentDay]) {
+                        if (dailyData[currentDay].inc > 0) dataHtml += `<div class="cal-inc">+${dailyData[currentDay].inc.toLocaleString()}</div>`;
+                        if (dailyData[currentDay].exp > 0) dataHtml += `<div class="cal-exp">-${dailyData[currentDay].exp.toLocaleString()}</div>`;
+                    }
+                    html += `<div class="cal-day"><span class="cal-date ${dClass}">${currentDay}</span>${dataHtml}</div>`;
+                    currentDay++;
+                } else html += `<div class="cal-day"><span class="cal-date other-month">${nextMonthDay++}</span></div>`;
+                if (currentDay > lastDate && i % 7 === 6) break; 
+            }
+            html += '</div>'; calDiv.innerHTML = html;
+        },
+
+        renderChart(filteredEntries, periodLabel, isSearchActive) {
+            const chartDiv = document.getElementById('expenseChart'); const chartType = document.getElementById('chartTypeSelect').value;
+            document.getElementById('chartTitle').innerText = `${periodLabel} ${chartType === 'income' ? '수입' : (chartType === 'all' ? '통합' : '지출')} 통계`;
+
+            let totalAmount = 0; const dataByDesc = {};
+            filteredEntries.forEach(e => {
+                if (!e.exclude && (isSearchActive || !e.excludeStatsOnly)) {
+                    const inc = e.income || 0; const exp = e.expense || 0; const safeDesc = e.desc || '미지정';
+                    if (chartType === 'all') {
+                        if (exp > 0) { dataByDesc['[지출] ' + safeDesc] = (dataByDesc['[지출] ' + safeDesc] || 0) + exp; totalAmount += exp; }
+                        if (inc > 0) { dataByDesc['[수입] ' + safeDesc] = (dataByDesc['[수입] ' + safeDesc] || 0) + inc; totalAmount += inc; }
+                    } else {
+                        const amt = chartType === 'expense' ? exp : inc;
+                        if (amt > 0) { dataByDesc[safeDesc] = (dataByDesc[safeDesc] || 0) + amt; totalAmount += amt; }
+                    }
+                }
+            });
+
+            if (totalAmount === 0) { chartDiv.innerHTML = `<p style="text-align:center; color:var(--text-muted); margin-top:20px; font-size:12px;">기록이 없습니다.</p>`; return; }
+            const sortedDescs = Object.keys(dataByDesc).sort((a, b) => dataByDesc[b] - dataByDesc[a]);
+            const maxAmount = dataByDesc[sortedDescs[0]];
+
+            chartDiv.innerHTML = sortedDescs.map(desc => {
+                const amt = dataByDesc[desc];
+                const pTotal = ((amt / totalAmount) * 100).toFixed(1); const pMax = ((amt / maxAmount) * 100).toFixed(1); 
+                let bColor = chartType === 'income' ? 'var(--color-income)' : (chartType === 'all' ? (desc.startsWith('[수입]') ? 'var(--color-income)' : 'var(--color-expense)') : 'var(--color-expense)');
+                return `<div class="chart-row">
+                    <div class="chart-label" title="${Utils.escHtml(desc)}">${Utils.escHtml(desc)}</div>
+                    <div class="chart-bar-wrap"><div class="chart-bar" style="width: ${pMax}%; background-color: ${bColor};"></div></div>
+                    <div class="chart-val"><span class="chart-val-amt">${amt.toLocaleString()}</span><span class="chart-val-pct">(${pTotal}%)</span></div>
+                </div>`;
+            }).join('');
+        },
+
+        render() {
+            this.calculateAndRenderAssets(); this.updateDescDatalist(); this.syncMonthlyMemoUI(); this.renderCalendar();
+
+            const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
+            const searchInput = document.getElementById('searchInput'); const sKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const isSearchActive = sKeyword.length > 0;
+
+            const thead = document.getElementById('tableHead');
+            let headHtml = `<tr><th>일자</th><th>분류</th><th>내용</th><th>수입</th><th>지출</th><th style="text-align: right; padding-right: 15px;">${(!isSearchActive && yf !== 'all') ? yf.slice(-2)+'년 잔액' : '잔액'}</th><th>비고</th>`;
+            DataStore.state.customCols.forEach(col => { headHtml += `<th>${Utils.escHtml(col.name)}</th>`; });
+            headHtml += `<th>관리</th></tr>`; thead.innerHTML = headHtml;
+
+            let pLabel = "해당 기간"; let cLabel = "전기 이월";
+            if (isSearchActive) pLabel = "검색 결과";
+            else {
+                if (yf === 'all') pLabel = "전체 기간";
+                else if (mf === 'all') pLabel = `${yf}년`;
+                else { pLabel = `${parseInt(mf)}월`; cLabel = parseInt(mf) === 1 ? `연도 기초` : `${parseInt(mf) - 1}월 이월`; }
+            }
+            if(document.getElementById('periodLabelInc')) document.getElementById('periodLabelInc').innerText = pLabel;
+            if(document.getElementById('periodLabelExp')) document.getElementById('periodLabelExp').innerText = pLabel;
+            if(document.getElementById('periodLabelNet')) document.getElementById('periodLabelNet').innerText = pLabel;
+            if(document.getElementById('carryBox')) document.getElementById('carryBox').style.display = isSearchActive ? 'none' : 'block';
+
+            let filterStartDate = (!isSearchActive && yf !== 'all' && mf !== 'all') ? `${yf}-${mf.padStart(2, '0')}-01` : null;
+            let yearStart = (!isSearchActive && yf !== 'all') ? `${yf}-01-01` : '0000-00-00';
+
+            let carriedBalance = 0; let currentBalance = 0;
+            DataStore.state.entries.forEach(e => {
+                const inc = e.income || 0; const exp = e.expense || 0;
+                if (!e.exclude && e.type !== 'transfer') {
+                    if (isSearchActive) currentBalance += (inc - exp);
+                    else if (e.date >= yearStart) {
+                        if (filterStartDate && e.date < filterStartDate) carriedBalance += (inc - exp);
+                        currentBalance += (inc - exp);
+                    }
+                }
+                if (isSearchActive || e.date >= yearStart) e.runningBalance = currentBalance; 
+            });
+
+            let tbodyContent = '';
+            if (!isSearchActive && filterStartDate) {
+                let cH = `<tr class="carried-row"><td>-</td><td>-</td><td>${cLabel}</td><td style="text-align:center;"><span class="num-wrap">-</span></td><td style="text-align:center;"><span class="num-wrap">-</span></td><td class="text-blue" style="text-align:right; padding-right:15px;"><span style="font-weight:bold; font-variant-numeric: tabular-nums;">${carriedBalance.toLocaleString()}</span></td><td>-</td>`;
+                DataStore.state.customCols.forEach(() => cH += `<td>-</td>`); cH += `<td>-</td></tr>`; tbodyContent += cH;
+            }
+
+            const filteredEntries = AppCtrl.getFilteredEntries(isSearchActive, sKeyword);
+            let periodIncome = 0; let periodExpense = 0; let searchRunningBalance = 0;
+
+            filteredEntries.forEach(entry => {
+                const inc = entry.income || 0; const exp = entry.expense || 0; const tAmt = entry.amount || Math.max(inc, exp) || 0;
+                if (!entry.exclude && (isSearchActive || !entry.excludeStatsOnly) && entry.type !== 'transfer') { periodIncome += inc; periodExpense += exp; }
+                let dispBal = entry.runningBalance || 0;
+                if (isSearchActive && !entry.exclude && entry.type !== 'transfer') dispBal = (searchRunningBalance += (inc - exp));
+
+                let tLabel = entry.type === 'transfer' ? '이체/상환' : (inc > 0 ? '수입' : '지출');
+                let lText = '';
+                const a1 = DataStore.state.assets.find(a => a.id === entry.linkedAsset1); if (a1) lText += `<span style="font-size:10px; color:${entry.linkedAssetOp1 === '+' ? 'var(--color-income)' : 'var(--color-expense)'};">[${Utils.escHtml(a1.name)}${Utils.escHtml(entry.linkedAssetOp1)}]</span><br>`;
+                const a2 = DataStore.state.assets.find(a => a.id === entry.linkedAsset2); if (a2) lText += `<span style="font-size:10px; color:${entry.linkedAssetOp2 === '+' ? 'var(--color-income)' : 'var(--color-expense)'};">[${Utils.escHtml(a2.name)}${Utils.escHtml(entry.linkedAssetOp2)}]</span>`;
+                if (lText) tLabel += `<br>${lText}`;
+
+                const rStyle = entry.exclude ? 'color: var(--text-muted);' : '';
+                const tClass = entry.exclude ? 'class="excluded-row"' : '';
+                let incTxt = inc > 0 ? inc.toLocaleString() : ''; let expTxt = exp > 0 ? exp.toLocaleString() : '';
+                if (entry.type === 'transfer') { incTxt = `<span style="color:var(--text-muted); font-size:11px;">(이체)</span>`; expTxt = `<span style="color:var(--text-muted); font-weight:bold;">${tAmt.toLocaleString()}</span>`; }
+                
+                let badge = entry.exclude ? `<span class="excluded-badge">완전제외</span>` : (entry.excludeStatsOnly ? `<span class="excluded-badge" style="background:#f39c12;">통계제외</span>` : '');
+                let mIcon = entry.memo ? ` <span title="${Utils.escHtml(entry.memo)}" style="cursor:help;">📝</span>` : '';
+                
+                let rHtml = `<td style="${rStyle}">${Utils.escHtml((entry.date||'').slice(2))}</td><td style="${rStyle}">${tLabel}${badge}</td><td style="${rStyle}">${Utils.escHtml(entry.desc || '')}</td><td class="${entry.exclude ? '' : 'text-blue'}" style="text-align:center; ${rStyle}"><span class="num-wrap">${incTxt}</span></td><td class="${entry.exclude ? '' : 'text-red'}" style="text-align:center; ${rStyle}"><span class="num-wrap">${expTxt}</span></td><td style="text-align:right; padding-right:15px; ${rStyle}"><span style="font-weight:bold; font-variant-numeric: tabular-nums;">${dispBal.toLocaleString()}</span></td><td style="${rStyle}">${Utils.escHtml(entry.note || '')}${mIcon}</td>`;
+                DataStore.state.customCols.forEach(col => rHtml += `<td style="${rStyle}">${Utils.escHtml(entry.customData?.[col.id] || '')}</td>`);
+                rHtml += `<td style="white-space: nowrap;"><button class="util-btn btn-edit" onclick="AppCtrl.editEntry('${Utils.escHtml(entry.id)}')">수정</button> <button class="util-btn btn-del" onclick="AppCtrl.deleteEntry('${Utils.escHtml(entry.id)}')">삭제</button></td>`;
+                tbodyContent += `<tr ${tClass}>${rHtml}</tr>`;
+            });
+
+            if(filteredEntries.length === 0) tbodyContent += `<tr><td colspan="${8 + DataStore.state.customCols.length}" style="text-align:center;">내역이 없습니다.</td></tr>`;
+            document.getElementById('tableBody').innerHTML = tbodyContent;
+
+            const pNet = periodIncome - periodExpense; const nbEl = document.getElementById('sumNetBalance');
+            if(nbEl) { nbEl.innerText = pNet.toLocaleString(); nbEl.className = pNet > 0 ? 'text-blue' : (pNet < 0 ? 'text-red' : ''); }
+            if(document.getElementById('carriedBalance')) document.getElementById('carriedBalance').innerText = carriedBalance.toLocaleString();
+            if(document.getElementById('sumIncome')) document.getElementById('sumIncome').innerText = periodIncome.toLocaleString();
+            if(document.getElementById('sumExpense')) document.getElementById('sumExpense').innerText = periodExpense.toLocaleString();
+            if(document.getElementById('sumBalance')) document.getElementById('sumBalance').innerText = (isSearchActive ? pNet : carriedBalance + pNet).toLocaleString();
+
+            this.renderChart(filteredEntries, pLabel, isSearchActive);
+        },
+
+        openYearlySettlement(targetYear) {
+            let year = targetYear || document.getElementById('yearFilter').value;
+            if (year === 'all') year = new Date().getFullYear().toString(); 
+            this.currentSettlementYear = parseInt(year);
+
+            let yInc = 0; let yExp = 0; const mData = {};
+            for(let i=1; i<=12; i++) mData[String(i).padStart(2, '0')] = { income: 0, expense: 0 };
+
+            DataStore.state.entries.forEach(e => {
+                if (!e.exclude && !e.excludeStatsOnly && e.date?.startsWith(year.toString())) {
+                    const m = e.date.substring(5, 7);
+                    if(mData[m]) { mData[m].income += (e.income || 0); mData[m].expense += (e.expense || 0); yInc += (e.income || 0); yExp += (e.expense || 0); }
+                }
+            });
+
+            let maxV = 0; for(let i=1; i<=12; i++) { const m = String(i).padStart(2, '0'); maxV = Math.max(maxV, mData[m].income, mData[m].expense); }
+
+            let tbHtml = ''; let chHtml = '<div class="settlement-chart-container">';
+            for(let i=1; i<=12; i++) {
+                const m = String(i).padStart(2, '0'); const inc = mData[m].income; const exp = mData[m].expense; const net = inc - exp;
+                tbHtml += `<tr><td><strong>${i}월</strong></td><td class="text-blue" style="text-align:center;"><span class="num-wrap">${inc.toLocaleString()}</span></td><td class="text-red" style="text-align:center;"><span class="num-wrap">${exp.toLocaleString()}</span></td><td style="color:${net > 0 ? 'var(--color-income)' : (net < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; font-weight:bold; text-align:center;"><span class="num-wrap">${net > 0 ? '+' : ''}${net.toLocaleString()}</span></td></tr>`;
+                chHtml += `<div class="settlement-bar-group"><div class="settlement-bars"><div class="settlement-bar-inc" style="height:${maxV===0?0:(inc/maxV)*100}%;" title="수입: ${inc.toLocaleString()}원"></div><div class="settlement-bar-exp" style="height:${maxV===0?0:(exp/maxV)*100}%;" title="지출: ${exp.toLocaleString()}원"></div></div><div class="settlement-month-label">${i}월</div></div>`;
+            }
+            const yNet = yInc - yExp;
+            tbHtml += `<tr style="background-color: var(--bg-highlight); font-weight: bold; border-top: 1px solid var(--border-main);"><td>연간 누적</td><td class="text-blue" style="text-align:center;"><span class="num-wrap">${yInc.toLocaleString()}</span></td><td class="text-red" style="text-align:center;"><span class="num-wrap">${yExp.toLocaleString()}</span></td><td style="color:${yNet > 0 ? 'var(--color-income)' : (yNet < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; text-align:center;"><span class="num-wrap">${yNet > 0 ? '+' : ''}${yNet.toLocaleString()}</span></td></tr>`;
+            chHtml += '</div>';
+
+            document.getElementById('settlementTbody').innerHTML = tbHtml; document.getElementById('settlementYearLabel').innerText = `${year}년 결산`;
+            document.getElementById('settlementChartContainer').innerHTML = chHtml; document.getElementById('settlementModal').style.display = 'block';
+        },
+        changeSettlementYear(direction) { if(this.currentSettlementYear) this.openYearlySettlement((this.currentSettlementYear + direction).toString()); },
+        closeYearlySettlement() { document.getElementById('settlementModal').style.display = 'none'; },
+        
+        syncDateInputWithFilter() {
+            const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
+            const dateInput = document.getElementById('dateInput');
+            if(dateInput && yf !== 'all' && mf !== 'all' && !dateInput.value.startsWith(`${yf}-${mf}`)) dateInput.value = `${yf}-${mf}-01`;
+        },
+        goToCurrentMonth() {
+            const now = new Date(); document.getElementById('yearFilter').value = now.getFullYear(); document.getElementById('monthFilter').value = String(now.getMonth() + 1).padStart(2, '0');
+            this.syncDateInputWithFilter(); this.render();
+        },
+        changeMonth(direction) {
+            const ys = document.getElementById('yearFilter'); const ms = document.getElementById('monthFilter');
+            if(document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+            if (ys.value === 'all') { const now = new Date(); ys.value = now.getFullYear(); ms.value = String(now.getMonth() + 1).padStart(2, '0'); } 
+            else {
+                let y = parseInt(ys.value);
+                if (ms.value === 'all') { if (direction > 0) ms.value = '01'; else { ys.value = y-1; ms.value = '12'; } } 
+                else {
+                    let m = parseInt(ms.value) + direction;
+                    if (m > 12) { m = 1; y++; } else if (m < 1) { m = 12; y--; }
+                    if (!Array.from(ys.options).map(o => o.value).includes(y.toString())) { alert('범위 이탈'); return; }
+                    ys.value = y; ms.value = String(m).padStart(2, '0');
+                }
+            }
+            this.syncDateInputWithFilter(); this.render();
+        }
+    };
+
+    window.addEventListener('click', (e) => { if (e.target === document.getElementById('settlementModal')) UIManager.closeYearlySettlement(); });
+
+    // ==========================================
+    // 4. AppCtrl
+    // ==========================================
+    const AppCtrl = {
+        init() { DataStore.init(); UIManager.initFilters(); UIManager.renderAll(); this.checkRecurringTasks(); },
+        saveMonthlyMemo() { UIManager.saveMonthlyMemo(); },
+        addAsset() {
+            const type = document.getElementById('newAssetType').value; const name = document.getElementById('newAssetName').value.trim();
+            const balance = parseInt(document.getElementById('newAssetBalance').value) || 0;
+            const inputDate = document.getElementById('newAssetDate').value; const maturityDate = document.getElementById('newAssetMaturity').value;
+            const rate = parseFloat(document.getElementById('newAssetRate').value) || 0;
+
+            if (!name) { alert('자산명 입력 요망'); return; }
+            if (UIManager.currentAssetEditId) {
+                const idx = DataStore.state.assets.findIndex(a => a.id === UIManager.currentAssetEditId);
+                if (idx !== -1) DataStore.state.assets[idx] = { id: UIManager.currentAssetEditId, type, name, baseBalance: balance, inputDate, maturityDate, rate };
+                UIManager.cancelAssetEdit();
+            } else {
+                DataStore.state.assets.push({ id: 'ast_' + Date.now(), type, name, baseBalance: balance, inputDate, maturityDate, rate });
+                document.getElementById('newAssetName').value = ''; document.getElementById('newAssetBalance').value = ''; document.getElementById('newAssetRate').value = '';
+            }
+            DataStore.save(); DataStore.pushState(); UIManager.renderInputForm(); UIManager.render();
+        },
+
+        editAsset(id) {
+            const ast = DataStore.state.assets.find(a => a.id === id); if (!ast) return;
+            UIManager.currentAssetEditId = id;
+            document.getElementById('newAssetType').value = ast.type; document.getElementById('newAssetName').value = ast.name;
+            document.getElementById('newAssetBalance').value = ast.baseBalance; document.getElementById('newAssetDate').value = ast.inputDate || '';
+            document.getElementById('newAssetMaturity').value = ast.maturityDate || ''; document.getElementById('newAssetRate').value = ast.rate || '';
+            document.getElementById('submitAssetBtn').innerText = '수정 완료'; document.getElementById('cancelAssetEditBtn').style.display = 'inline-flex';
+        },
+
+        deleteAsset(id) {
+            const ast = DataStore.state.assets.find(a => a.id === id); if (!ast) return;
+            if(confirm(`[${ast.name}] 삭제하시겠습니까?`)) {
+                if(UIManager.currentAssetEditId === id) UIManager.cancelAssetEdit();
+                const delLinked = confirm('연동 가계부 내역 완전 삭제?\n[확인] 모두 삭제\n[취소] 내역 유지, 연동 해제');
+                DataStore.state.assets = DataStore.state.assets.filter(a => a.id !== id);
+                if (delLinked) DataStore.state.entries = DataStore.state.entries.filter(e => e.linkedAsset1 !== id && e.linkedAsset2 !== id);
+                else DataStore.state.entries.forEach(e => { if(e.linkedAsset1 === id) e.linkedAsset1 = ''; if(e.linkedAsset2 === id) e.linkedAsset2 = ''; });
+                DataStore.save(); DataStore.pushState(); UIManager.renderInputForm(); UIManager.render();
+            }
+        },
+
+        addColumn() {
+            const name = document.getElementById('newColName').value.trim(); if(!name) return;
+            DataStore.state.customCols.push({ id: 'col_' + Date.now(), name: name });
+            document.getElementById('newColName').value = ''; DataStore.save(); DataStore.pushState(); UIManager.renderAll();
+        },
+        updateColName(id, newName) {
+            if(!newName.trim()) return; const col = DataStore.state.customCols.find(c => c.id === id);
+            if(col) { col.name = newName.trim(); DataStore.save(); DataStore.pushState(); UIManager.renderAll(); }
+        },
+        deleteCol(id) { if(confirm('삭제하시겠습니까?')) { DataStore.state.customCols = DataStore.state.customCols.filter(c => c.id !== id); DataStore.save(); DataStore.pushState(); UIManager.renderAll(); } },
+
+        submitEntry() {
+            const startDateStr = document.getElementById('dateInput').value; const type = document.getElementById('typeInput').value;
+            const desc = document.getElementById('descInput').value.trim(); const amount = parseInt(document.getElementById('amountInput').value) || 0;
+            if (!startDateStr || !desc || amount <= 0) { alert('정확히 입력하십시오.'); return; }
+
+            const entryData = {
+                date: startDateStr, type, desc, amount,
+                income: type === 'income' ? amount : 0, expense: type === 'expense' ? amount : 0,
+                exclude: document.getElementById('excludeInput').checked, excludeStatsOnly: document.getElementById('excludeStatsOnlyInput').checked,
+                linkedAsset1: document.getElementById('linkedAsset1').value, linkedAssetOp1: document.getElementById('linkedAssetOp1').value,
+                linkedAsset2: document.getElementById('linkedAsset2').value, linkedAssetOp2: document.getElementById('linkedAssetOp2').value,
+                note: document.getElementById('noteInput')?.value.trim() || '', memo: document.getElementById('memoInput')?.value.trim() || '',
+                customData: {}
+            };
+            DataStore.state.customCols.forEach(col => { entryData.customData[col.id] = document.getElementById(`customInput_${col.id}`)?.value || ''; });
+
+            if (UIManager.currentEditId) {
+                const idx = DataStore.state.entries.findIndex(e => e.id === UIManager.currentEditId);
+                if(idx !== -1) DataStore.state.entries[idx] = { ...DataStore.state.entries[idx], ...entryData, customData: { ...DataStore.state.entries[idx].customData, ...entryData.customData } };
+                UIManager.currentEditId = null; document.getElementById('submitBtn').innerText = '내역 등록'; document.getElementById('cancelEditBtn').style.display = 'none';
+            } else {
+                DataStore.state.entries.push({ id: Date.now() + '_' + Math.floor(Math.random() * 1000), ...entryData });
+                const rType = document.getElementById('repeatType').value;
+                if (rType !== 'none') {
+                    let d = new Date(startDateStr + 'T00:00:00');
+                    if (rType === 'daily') d.setDate(d.getDate() + 1); else if (rType === 'monthly') d.setMonth(d.getMonth() + 1); else if (rType === 'yearly') d.setFullYear(d.getFullYear() + 1);
+                    DataStore.state.recurringTasks.push({ id: 'rec_' + Date.now(), ...entryData, repeatType: rType, nextDate: Utils.getLocalYYYYMMDD(d), endDate: document.getElementById('repeatEndDate').value || null });
+                }
+            }
+            DataStore.state.entries.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+            DataStore.save(); DataStore.pushState(); UIManager.render(); document.getElementById('amountInput').value = '0';
+        },
+
+        editEntry(id) {
+            const e = DataStore.state.entries.find(e => e.id === id); if(!e) return;
+            UIManager.currentEditId = id;
+            document.getElementById('dateInput').value = e.date || ''; document.getElementById('typeInput').value = e.type || (e.income > 0 ? 'income' : 'expense');
+            document.getElementById('descInput').value = e.desc || ''; document.getElementById('amountInput').value = e.amount || Math.max(e.income||0, e.expense||0);
+            document.getElementById('excludeInput').checked = e.exclude || false; document.getElementById('excludeStatsOnlyInput').checked = e.excludeStatsOnly || false;
+            document.getElementById('linkedAsset1').value = e.linkedAsset1 || ''; document.getElementById('linkedAssetOp1').value = e.linkedAssetOp1 || '-';
+            document.getElementById('linkedAsset2').value = e.linkedAsset2 || ''; document.getElementById('linkedAssetOp2').value = e.linkedAssetOp2 || '+';
+            if(document.getElementById('noteInput')) document.getElementById('noteInput').value = e.note || '';
+            if(document.getElementById('memoInput')) { document.getElementById('memoInput').value = e.memo || ''; UIManager.checkMemoContent(); }
+            document.getElementById('repeatType').value = 'none'; UIManager.toggleRepeatDate();
+            DataStore.state.customCols.forEach(col => { const inp = document.getElementById(`customInput_${col.id}`); if(inp) inp.value = e.customData?.[col.id] || ''; });
+            document.getElementById('submitBtn').innerText = '단일 수정 완료'; document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+            document.getElementById('inputFormContainer').style.display = 'block'; document.getElementById('inputToggleIcon').innerText = '▲'; document.getElementById('inputFormContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+        cancelEdit() { UIManager.currentEditId = null; document.getElementById('submitBtn').innerText = '내역 등록'; document.getElementById('cancelEditBtn').style.display = 'none'; UIManager.clearInputs(); },
+        deleteEntry(id) { if(confirm('삭제하시겠습니까?')) { if(UIManager.currentEditId === id) this.cancelEdit(); DataStore.state.entries = DataStore.state.entries.filter(e => e.id !== id); DataStore.save(); DataStore.pushState(); UIManager.render(); } },
+        deleteRecurring(id) { if(confirm('예약 취소?')) { DataStore.state.recurringTasks = DataStore.state.recurringTasks.filter(t => t.id !== id); DataStore.save(); DataStore.pushState(); UIManager.renderRecurringTasks(); } },
+
+        checkRecurringTasks() {
+            const today = Utils.getTodayString(); let updated = false; let newCnt = 0;
+            DataStore.state.recurringTasks.forEach(t => {
+                while (t.nextDate && t.nextDate <= today) {
+                    if (t.endDate && t.nextDate > t.endDate) { t.finished = true; break; }
+                    if (confirm(`[예약 입력] 날짜(${t.nextDate}) 도래.\n기입하시겠습니까?\n내용: ${t.desc}\n금액: ${(t.amount||0).toLocaleString()}원`)) {
+                        DataStore.state.entries.push({ id: Date.now() + Math.floor(Math.random()*1000), date: t.nextDate, type: t.type, desc: t.desc, amount: t.amount, income: t.type==='income'?(t.amount||0):0, expense: t.type==='expense'?(t.amount||0):0, note: t.note, memo: t.memo, exclude: t.exclude, excludeStatsOnly: t.excludeStatsOnly, linkedAsset1: t.linkedAsset1, linkedAssetOp1: t.linkedAssetOp1, linkedAsset2: t.linkedAsset2, linkedAssetOp2: t.linkedAssetOp2, customData: t.customData });
+                        newCnt++;
+                    }
+                    let nd = new Date(t.nextDate + 'T00:00:00');
+                    if (t.repeatType === 'daily') nd.setDate(nd.getDate() + 1); else if (t.repeatType === 'monthly') nd.setMonth(nd.getMonth() + 1); else if (t.repeatType === 'yearly') nd.setFullYear(nd.getFullYear() + 1);
+                    t.nextDate = Utils.getLocalYYYYMMDD(nd); updated = true;
+                }
+            });
+            if (updated) {
+                DataStore.state.recurringTasks = DataStore.state.recurringTasks.filter(t => !t.finished); DataStore.save();
+                if(newCnt > 0) { DataStore.state.entries.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0)); DataStore.pushState(); UIManager.renderAll(); }
+            }
+        },
+
+        getFilteredEntries(isSearchActive, searchKeyword) {
+            let flt = DataStore.state.entries;
+            if (isSearchActive) {
+                const sYear = document.getElementById('searchYearFilter')?.value || 'all';
+                return flt.filter(e => {
+                    if (sYear !== 'all' && !e.date?.startsWith(sYear)) return false;
+                    return (e.desc?.toLowerCase().includes(searchKeyword) || e.date?.includes(searchKeyword) || e.income?.toString().includes(searchKeyword) || e.expense?.toString().includes(searchKeyword) || e.note?.toLowerCase().includes(searchKeyword) || e.memo?.toLowerCase().includes(searchKeyword) || Object.values(e.customData||{}).some(v => v.toLowerCase().includes(searchKeyword)));
+                });
+            }
+            const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
+            if (yf !== 'all') flt = flt.filter(e => e.date?.startsWith(yf));
+            if (mf !== 'all') flt = flt.filter(e => e.date?.substring(5, 7) === mf);
+            return flt;
+        },
+
+        exportToCSV() {
+            const sKw = document.getElementById('searchInput').value.trim().toLowerCase(); const isActive = sKw.length > 0;
+            const fEnt = this.getFilteredEntries(isActive, sKw);
+            if (fEnt.length === 0) { alert('내보낼 데이터 없음'); return; }
+            let head = `\uFEFF일자,분류,연동자산1,기호1,연동자산2,기호2,합산제외,통계제외,내용,수입(원),지출(원),비고,상세메모,잔액(원)`;
+            DataStore.state.customCols.forEach(col => head += `,${col.name}`);
+            let csv = head + '\n';
+            fEnt.forEach(e => {
+                let a1 = DataStore.state.assets.find(a => a.id === e.linkedAsset1); let a2 = DataStore.state.assets.find(a => a.id === e.linkedAsset2);
+                let row = `${e.date||''},${e.type === 'transfer' ? '이체' : (e.income > 0 ? '수입' : '지출')},${a1?.name||''},${e.linkedAssetOp1||''},${a2?.name||''},${e.linkedAssetOp2||''},${e.exclude ? 'O' : 'X'},${e.excludeStatsOnly ? 'O' : 'X'},"${(e.desc||'').replace(/"/g, '""')}",${e.income||0},${e.expense||0},"${(e.note||'').replace(/"/g, '""')}","${(e.memo||'').replace(/"/g, '""')}",${e.runningBalance||0}`;
+                DataStore.state.customCols.forEach(col => row += `,"${(e.customData?.[col.id]||'').replace(/"/g, '""')}"`);
+                csv += row + '\n';
+            });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            link.download = isActive ? `가계부_내역.csv` : `가계부_${document.getElementById('yearFilter').value}_${document.getElementById('monthFilter').value}.csv`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        },
+
+        backupData() {
+            if(DataStore.state.entries.length === 0 && DataStore.state.assets.length === 0) { alert('백업 데이터 없음'); return; }
+            const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(DataStore.state)], {type: "application/json"}));
+            link.download = `가계부_통합백업_${Utils.getTodayString()}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        },
+
+        restoreData(event) {
+            const file = event.target.files[0]; if (!file) return;
+            if(!confirm('기존 데이터가 덮어씌워집니다. 진행?')) { event.target.value = ''; return; }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const rData = JSON.parse(e.target.result);
+                    if (rData.entries && rData.customCols) {
+                        localStorage.setItem('accountBook_v2', JSON.stringify(rData.entries));
+                        localStorage.setItem('accountCols', JSON.stringify(rData.customCols));
+                        if (rData.assets) localStorage.setItem('accountAssets', JSON.stringify(rData.assets));
+                        if (rData.recurringTasks) localStorage.setItem('accountRecurring_v2', JSON.stringify(rData.recurringTasks));
+                        if (rData.monthlyMemos) localStorage.setItem('accountMonthlyMemos', JSON.stringify(rData.monthlyMemos));
+                        alert('복원 완료.'); location.reload(); 
+                    } else alert('형식 오류');
+                } catch (error) { alert('파일 읽기 오류'); }
+            };
+            reader.readAsText(file);
+        }
+    };
+
+    // 앱 실행 및 서비스 워커 등록
+    AppCtrl.init();
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker 등록 완료:', reg.scope))
+                .catch(err => console.error('Service Worker 등록 실패:', err));
+        });
+    }
+</script>
+
+</body>
+</html>
