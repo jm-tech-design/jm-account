@@ -175,9 +175,9 @@
         <div id="actionButtonsContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
             <div class="action-buttons flex-row">
                 <button class="std-btn bg-blue flex-1" onclick="UIManager.openYearlySettlement()">연도 결산</button>
-                <button class="std-btn bg-green flex-1" onclick="AppCtrl.exportToCSV()">CSV 변환</button>
-                <button class="std-btn bg-purple flex-1" onclick="AppCtrl.openBackupModal()">데이터 백업</button>
-                <input type="file" id="restoreInput" style="display:none;" accept=".json" onchange="AppCtrl.restoreData(event)">
+                <button class="std-btn bg-green flex-1" onclick="AppCtrl.exportToCSV()">CSV 내보내기</button>
+                <button class="std-btn bg-purple flex-1" onclick="AppCtrl.backupData()">데이터 백업</button>
+                <input type="file" id="restoreInput" style="display:none;" accept=".json, .txt" onchange="AppCtrl.restoreData(event)">
                 <button class="std-btn bg-orange flex-1" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
             </div>
         </div>
@@ -203,7 +203,7 @@
 
     <div class="box" id="debtSimulatorBox" style="display: none;">
         <div class="collapsible-header" onclick="UIManager.toggleSection('debtSimContent', 'debtSimToggleIcon')">
-            부채 상환 대시보드 <span id="debtSimToggleIcon">▼</span>
+            🎯 부채 상환 대시보드 <span id="debtSimToggleIcon">▼</span>
         </div>
         <div id="debtSimContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 15px;">
             <div class="flex-row mobile-row" style="align-items: flex-end;">
@@ -358,22 +358,6 @@
         <div class="modal-footer-nav flex-row">
             <button class="std-btn flex-1" onclick="UIManager.changeSettlementYear(-1)">◀ 이전 연도</button>
             <button class="std-btn flex-1" onclick="UIManager.changeSettlementYear(1)">다음 연도 ▶</button>
-        </div>
-    </div>
-</div>
-
-<div id="backupModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" onclick="document.getElementById('backupModal').style.display='none'">&times;</span>
-        <h2 style="margin-top:0;">데이터 수동 백업</h2>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">
-            스마트폰 브라우저의 보안 정책으로 파일 다운로드가 차단되었습니다.<br>
-            아래의 원시 데이터(Raw Data) 텍스트를 복사하여 카카오톡 내게쓰기, 메모장, 이메일 등에 붙여넣기 하십시오. 복원 시 복사한 텍스트를 .json 확장자 파일로 저장하여 넣으시면 됩니다.
-        </p>
-        <textarea id="backupTextarea" style="width:100%; height:150px; font-size:11px; font-family:monospace; padding:8px; border:1px solid var(--border-input); border-radius:4px; margin-bottom:15px; background:var(--bg-input); color:var(--text-main);" readonly></textarea>
-        <div class="flex-row">
-            <button class="std-btn bg-blue flex-1" onclick="AppCtrl.copyBackupText()">텍스트 복사</button>
-            <button class="std-btn bg-green flex-1" onclick="AppCtrl.forceDownloadBackup()">파일 다운로드 강제 시도</button>
         </div>
     </div>
 </div>
@@ -1324,39 +1308,16 @@
             return flt;
         },
 
-        // [변경됨] 수동 백업 텍스트 모달창 열기
-        openBackupModal() {
-            if(DataStore.state.entries.length === 0 && DataStore.state.assets.length === 0) { alert('백업할 데이터가 없습니다.'); return; }
-            const jsonStr = JSON.stringify(DataStore.state);
-            document.getElementById('backupTextarea').value = jsonStr;
-            document.getElementById('backupModal').style.display = 'block';
-        },
-
-        // [변경됨] 수동 텍스트 클립보드 복사
-        copyBackupText() {
-            const textarea = document.getElementById('backupTextarea');
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                alert('데이터가 클립보드에 복사되었습니다.\n안전한 곳(카카오톡, 메모장)에 붙여넣기 하십시오.');
-            } catch (err) {
-                alert('복사 실패. 수동으로 텍스트를 모두 선택하여 복사하십시오.');
-            }
-        },
-
-        // [변경됨] 다운로드 강제 시도
-        forceDownloadBackup() {
-            const fileName = `가계부_통합백업_${Utils.getTodayString()}.json`;
-            const jsonStr = document.getElementById('backupTextarea').value;
-            const blob = new Blob([jsonStr], {type: "application/json"});
-            
+        // [변경됨] 백업 다운로드 방식 - .txt 변장 및 Data URI 강제 시도
+        fallbackDownload(jsonStr, fileName) {
+            // 안드로이드 크롬 PWA 샌드박스를 뚫기 위한 최후의 수단: Data URI 포맷
+            const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(jsonStr);
             const link = document.createElement('a'); 
-            link.href = URL.createObjectURL(blob);
-            link.download = fileName; 
-            document.body.appendChild(link); 
-            link.click(); 
+            link.setAttribute("href", dataStr);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
         },
 
         exportToCSV() {
@@ -1373,16 +1334,49 @@
                 csv += row + '\n';
             });
             
-            const fileName = isActive ? `가계부_내역.csv` : `가계부_${document.getElementById('yearFilter').value}_${document.getElementById('monthFilter').value}.csv`;
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const fileName = isActive ? `가계부_내역.txt` : `가계부_${document.getElementById('yearFilter').value}_${document.getElementById('monthFilter').value}.txt`;
             
-            const link = document.createElement("a"); 
-            link.href = URL.createObjectURL(blob);
-            link.download = fileName;
-            document.body.appendChild(link); 
-            link.click(); 
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
+            if (navigator.canShare) {
+                try {
+                    const file = new File([csv], fileName, { type: 'text/plain' });
+                    if (navigator.canShare({ files: [file] })) {
+                        navigator.share({ title: '가계부 CSV 내보내기', files: [file] })
+                        .catch(err => this.fallbackDownload(csv, fileName));
+                        return;
+                    }
+                } catch(e) { console.warn(e); }
+            }
+            this.fallbackDownload(csv, fileName);
+        },
+
+        backupData() {
+            if(DataStore.state.entries.length === 0 && DataStore.state.assets.length === 0) { alert('백업 데이터 없음'); return; }
+            
+            // 핵심: 안드로이드 크롬이 허용하는 .txt 확장자로 강제 위장
+            const fileName = `가계부_통합백업_${Utils.getTodayString()}.txt`;
+            const jsonStr = JSON.stringify(DataStore.state);
+            
+            if (navigator.canShare) {
+                try {
+                    // 순수 텍스트 파일로 인식시켜 OS 공유 창을 유도
+                    const file = new File([jsonStr], fileName, { type: "text/plain" });
+                    if (navigator.canShare({ files: [file] })) {
+                        navigator.share({ 
+                            title: '가계부 백업', 
+                            text: '안전한 곳에 저장하십시오. (복원 시 선택)',
+                            files: [file] 
+                        })
+                        .catch(err => {
+                            console.warn('공유 취소 또는 실패. 강제 다운로드 시도:', err);
+                            this.fallbackDownload(jsonStr, fileName);
+                        });
+                        return;
+                    }
+                } catch(e) { console.warn('파일 공유 객체 생성 실패:', e); }
+            }
+            
+            // 공유 창 띄우기가 아예 안 되는 기기라면 강제 다운로드 실행
+            this.fallbackDownload(jsonStr, fileName);
         },
 
         restoreData(event) {
@@ -1409,7 +1403,7 @@
                         
                         alert('복원 완료.'); location.reload(); 
                     } else alert('지원하지 않는 백업 파일입니다.');
-                } catch (error) { alert('파일 읽기 오류'); }
+                } catch (error) { alert('파일 읽기 오류. 형식을 확인하십시오.'); }
             };
             reader.readAsText(file);
         }
