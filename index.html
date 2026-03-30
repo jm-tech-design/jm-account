@@ -203,7 +203,7 @@
 
     <div class="box" id="debtSimulatorBox" style="display: none;">
         <div class="collapsible-header" onclick="UIManager.toggleSection('debtSimContent', 'debtSimToggleIcon')">
-            🎯 부채 상환 대시보드 <span id="debtSimToggleIcon">▼</span>
+            부채 상환 대시보드 <span id="debtSimToggleIcon">▼</span>
         </div>
         <div id="debtSimContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 15px;">
             <div class="flex-row mobile-row" style="align-items: flex-end;">
@@ -809,7 +809,6 @@
                 simBox.style.display = 'none';
                 return;
             } else {
-                // 부채 자산이 있을 때만 노출되도록 제어
                 simBox.style.display = 'block'; 
             }
 
@@ -1309,6 +1308,7 @@
             return flt;
         },
 
+        // [핵심 변경] 강제 다운로드 우회 로직 탑재
         exportToCSV() {
             const sKw = document.getElementById('searchInput').value.trim().toLowerCase(); const isActive = sKw.length > 0;
             const fEnt = this.getFilteredEntries(isActive, sKw);
@@ -1325,31 +1325,62 @@
             
             const fileName = isActive ? `가계부_내역.csv` : `가계부_${document.getElementById('yearFilter').value}_${document.getElementById('monthFilter').value}.csv`;
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const file = new File([blob], fileName, { type: 'text/csv' });
-
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                navigator.share({ title: '가계부 CSV 내보내기', files: [file] }).catch(err => console.error('공유 실패:', err));
-            } else {
-                const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+            
+            const forceDownload = () => {
+                const link = document.createElement("a"); 
+                link.href = URL.createObjectURL(blob);
                 link.download = fileName;
-                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                document.body.appendChild(link); 
+                link.click(); 
+                document.body.removeChild(link);
                 URL.revokeObjectURL(link.href);
+            };
+
+            try {
+                const file = new File([blob], fileName, { type: 'text/csv' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({ title: '가계부 CSV 내보내기', files: [file] })
+                    .catch(err => {
+                        console.warn('공유 API 차단됨, 강제 다운로드 실행:', err);
+                        forceDownload();
+                    });
+                } else {
+                    forceDownload();
+                }
+            } catch(e) {
+                forceDownload();
             }
         },
 
+        // [핵심 변경] 강제 다운로드 우회 로직 탑재
         backupData() {
             if(DataStore.state.entries.length === 0 && DataStore.state.assets.length === 0) { alert('백업 데이터 없음'); return; }
             const fileName = `가계부_통합백업_${Utils.getTodayString()}.json`;
             const blob = new Blob([JSON.stringify(DataStore.state)], {type: "application/json"});
-            const file = new File([blob], fileName, { type: "application/json" });
-
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                navigator.share({ title: '가계부 데이터 백업', files: [file] }).catch(err => console.error('공유 실패:', err));
-            } else {
-                const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+            
+            const forceDownload = () => {
+                const link = document.createElement('a'); 
+                link.href = URL.createObjectURL(blob);
                 link.download = fileName; 
-                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                document.body.appendChild(link); 
+                link.click(); 
+                document.body.removeChild(link);
                 URL.revokeObjectURL(link.href);
+            };
+
+            try {
+                const file = new File([blob], fileName, { type: "application/json" });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({ title: '가계부 데이터 백업', files: [file] })
+                    .catch(err => {
+                        console.warn('공유 API 차단됨, 강제 다운로드 실행:', err);
+                        forceDownload();
+                    });
+                } else {
+                    forceDownload();
+                }
+            } catch(e) {
+                forceDownload();
             }
         },
 
