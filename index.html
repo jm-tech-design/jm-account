@@ -176,6 +176,10 @@
             <div class="action-buttons flex-row">
                 <button class="std-btn bg-blue flex-1" onclick="UIManager.openYearlySettlement()">연도 결산</button>
                 <button class="std-btn bg-green flex-1" onclick="AppCtrl.exportToCSV()">CSV 내보내기</button>
+                
+                <input type="file" id="importCsvInput" style="display:none;" accept=".csv" onchange="AppCtrl.importFromCSV(event)">
+                <button class="std-btn bg-green flex-1" onclick="document.getElementById('importCsvInput').click()">CSV 불러오기</button>
+                
                 <button class="std-btn bg-purple flex-1" onclick="AppCtrl.backupData()">데이터 백업</button>
                 <input type="file" id="restoreInput" style="display:none;" accept=".json, .txt" onchange="AppCtrl.restoreData(event)">
                 <button class="std-btn bg-orange flex-1" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
@@ -1158,7 +1162,7 @@
     window.addEventListener('click', (e) => { if (e.target === document.getElementById('settlementModal')) UIManager.closeYearlySettlement(); });
 
     // ==========================================
-    // 4. AppCtrl (공유 기능 제거, 100% 직접 다운로드로 수정)
+    // 4. AppCtrl
     // ==========================================
     const AppCtrl = {
         init() { DataStore.init(); UIManager.initFilters(); UIManager.renderAll(); this.checkRecurringTasks(); },
@@ -1308,11 +1312,13 @@
             return flt;
         },
 
-        // [핵심 변경] 공유 API 찌꺼기 삭제, 100% 직접 다운로드 실행
+        // [수정됨] CSV 엑셀 호환 내보내기 강제 적용 (.csv)
         exportToCSV() {
             const sKw = document.getElementById('searchInput').value.trim().toLowerCase(); const isActive = sKw.length > 0;
             const fEnt = this.getFilteredEntries(isActive, sKw);
-            if (fEnt.length === 0) { alert('내보낼 데이터 없음'); return; }
+            if (fEnt.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
+            
+            // 엑셀에서 한글이 깨지지 않도록 \uFEFF (BOM) 필수 추가
             let head = `\uFEFF일자,분류,연동자산1,기호1,연동자산2,기호2,합산제외,통계제외,내용,수입(원),지출(원),비고,상세메모,잔액(원)`;
             DataStore.state.customCols.forEach(col => head += `,${col.name}`);
             let csv = head + '\n';
@@ -1323,23 +1329,125 @@
                 csv += row + '\n';
             });
             
-            const fileName = isActive ? `가계부_내역.txt` : `가계부_${document.getElementById('yearFilter').value}_${document.getElementById('monthFilter').value}.txt`;
+            const fileName = isActive ? `가계부_내역.csv` : `가계부_${document.getElementById('yearFilter').value}_${document.getElementById('monthFilter').value}.csv`;
             
             try {
-                const blob = new Blob([csv], { type: 'text/plain;charset=utf-8;' });
+                // CSV 전용 MIME 타입 사용
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a"); 
                 link.href = URL.createObjectURL(blob);
                 link.download = fileName;
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 기기의 [내 파일 > 다운로드] 폴더에 저장되었습니다.`);
+                alert(`'${fileName}' 파일이 다운로드되었습니다.\n(엑셀 등에서 열어보실 수 있습니다)`);
             } catch(e) {
-                alert('파일 다운로드 중 오류가 발생했습니다.');
+                alert('CSV 내보내기 중 오류가 발생했습니다.');
             }
         },
 
-        // [핵심 변경] 공유 API 찌꺼기 삭제, 100% 직접 다운로드 실행
+        // [추가됨] 엑셀에서 작성한 CSV 데이터를 안전하게 불러와 융합하는 파싱 엔진
+        importFromCSV(event) {
+            const file = event.target.files[0]; 
+            if (!file) return;
+            if (!confirm('선택한 CSV 파일의 데이터를 기존 가계부 내역에 추가하시겠습니까?\n(기존 데이터는 삭제되지 않으며 병합됩니다)')) { 
+                event.target.value = ''; 
+                return; 
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split('\n').filter(line => line.trim().length > 0);
+                    if (lines.length < 2) { alert('데이터가 없거나 잘못된 양식의 CSV 파일입니다.'); return; }
+                    
+                    let addedCount = 0;
+                    
+                    // 엑셀이 만든 복잡한 CSV 문자열(따옴표 내 쉼표)을 완벽히 분해하는 정규식 우회 헬퍼
+                    const parseCSVRow = (str) => {
+                        let result = []; let inQuotes = false; let current = '';
+                        for (let i = 0; i < str.length; i++) {
+                            let char = str[i];
+                            if (char === '"') {
+                                if (inQuotes && str[i+1] === '"') { current += '"'; i++; } // 쌍따옴표 이스케이프 처리
+                                else { inQuotes = !inQuotes; }
+                            } else if (char === ',' && !inQuotes) {
+                                result.push(current); current = '';
+                            } else { current += char; }
+                        }
+                        result.push(current);
+                        return result;
+                    };
+
+                    const parseNumber = (str) => parseInt((str || '0').toString().replace(/,/g, '')) || 0;
+                    const assetMap = {};
+                    DataStore.state.assets.forEach(a => assetMap[a.name] = a.id);
+
+                    // 0번째 줄(헤더)을 제외하고 1번째 줄부터 반복
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = parseCSVRow(lines[i]);
+                        if (cols.length < 11) continue; // 필수 열 개수 미달 시 스킵
+                        
+                        let dateStr = cols[0] ? cols[0].replace('\uFEFF', '').trim() : '';
+                        dateStr = dateStr.replace(/[\./]/g, '-').replace(/\s/g, ''); // 엑셀식 날짜 포맷 강제 교정
+                        if (!dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) dateStr = Utils.getTodayString();
+                        
+                        const typeRaw = cols[1];
+                        let type = 'expense';
+                        if (typeRaw === '수입') type = 'income';
+                        else if (typeRaw === '이체' || typeRaw === '이체/상환') type = 'transfer';
+                        
+                        const a1Name = cols[2]; const op1 = cols[3] || '-';
+                        const a2Name = cols[4]; const op2 = cols[5] || '+';
+                        const exclude = cols[6] === 'O';
+                        const excludeStats = cols[7] === 'O';
+                        const desc = cols[8];
+                        const income = parseNumber(cols[9]);
+                        const expense = parseNumber(cols[10]);
+                        const note = cols[11] || '';
+                        const memo = cols[12] || '';
+                        
+                        const amount = Math.max(income, expense);
+                        if (!desc || amount < 0) continue;
+
+                        const linkedAsset1 = assetMap[a1Name] || '';
+                        const linkedAsset2 = assetMap[a2Name] || '';
+
+                        let customData = {};
+                        DataStore.state.customCols.forEach((cCol, idx) => {
+                            if (cols[14 + idx]) customData[cCol.id] = cols[14 + idx];
+                        });
+
+                        DataStore.state.entries.push({
+                            id: Date.now() + '_' + Math.floor(Math.random() * 1000) + i,
+                            date: dateStr, type, desc, amount, income, expense,
+                            exclude, excludeStatsOnly: excludeStats,
+                            linkedAsset1, linkedAssetOp1: op1,
+                            linkedAsset2, linkedAssetOp2: op2,
+                            note, memo, customData
+                        });
+                        addedCount++;
+                    }
+
+                    if (addedCount > 0) {
+                        DataStore.state.entries.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+                        DataStore.save();
+                        DataStore.pushState();
+                        alert(`총 ${addedCount}건의 데이터가 성공적으로 병합되었습니다.`);
+                        UIManager.renderAll();
+                    } else {
+                        alert('추가할 수 있는 유효한 데이터가 없습니다. CSV 양식을 확인하십시오.');
+                    }
+
+                } catch (error) {
+                    alert('CSV 파일을 분석하는 중 오류가 발생했습니다.\n우리가 내보낸 양식과 동일한지 확인하십시오.');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file, 'utf-8');
+        },
+
         backupData() {
             if(DataStore.state.entries.length === 0 && DataStore.state.assets.length === 0) { alert('백업할 데이터가 없습니다.'); return; }
             
@@ -1354,7 +1462,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 기기의 [내 파일 > 다운로드] 폴더에 저장되었습니다.\n나중에 복원하실 때 이 파일을 선택해주세요.`);
+                alert(`'${fileName}' 파일이 다운로드 폴더에 저장되었습니다.\n(향후 복원 시 이 파일을 선택하십시오)`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
