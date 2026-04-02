@@ -444,7 +444,6 @@
     // 2. DataStore
     // ==========================================
     const DataStore = {
-        // [신규 추가] stockAccounts 배열을 추가하여 다중 계좌 관리
         state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {}, stockRecords: [], stockAccounts: [] },
         history: { stack: [], pointer: -1, MAX: 5 },
         
@@ -480,7 +479,6 @@
             this.state.stockRecords = this.safeParse('accountStocks', []);
             if (!Array.isArray(this.state.stockRecords)) this.state.stockRecords = [];
 
-            // [신규 추가] 주식 계좌 로드 및 초기화
             this.state.stockAccounts = this.safeParse('accountStockAccounts', []);
             if (!Array.isArray(this.state.stockAccounts)) this.state.stockAccounts = [];
             
@@ -525,7 +523,6 @@
                     if(e.excludeStatsOnly === undefined) { e.excludeStatsOnly = false; changed = true; }
                 });
 
-                // [신규 추가] 구버전 주식 데이터를 위한 계좌명(기본 계좌) 마이그레이션
                 if (!this.state.stockAccounts || this.state.stockAccounts.length === 0) {
                     this.state.stockAccounts = ['기본 계좌'];
                     changed = true;
@@ -565,7 +562,7 @@
                 localStorage.setItem('accountMonthlyMemos', JSON.stringify(this.state.monthlyMemos));
                 localStorage.setItem('accountSettings', JSON.stringify(this.state.settings));
                 localStorage.setItem('accountStocks', JSON.stringify(this.state.stockRecords));
-                localStorage.setItem('accountStockAccounts', JSON.stringify(this.state.stockAccounts)); // 계좌 저장
+                localStorage.setItem('accountStockAccounts', JSON.stringify(this.state.stockAccounts));
             } catch (e) {
                 if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업(JSON) 후 오래된 내역을 삭제하세요.');
             }
@@ -612,7 +609,7 @@
         expenseChartObj: null,
         stockChartObj: null, 
         searchTimeout: null,
-        currentStockAccount: '기본 계좌', // [추가됨] 현재 선택된 주식 계좌 상태값
+        currentStockAccount: '기본 계좌', 
 
         debouncedRender() {
             if (this.searchTimeout) clearTimeout(this.searchTimeout);
@@ -634,7 +631,6 @@
             const stockMonthInput = document.getElementById('stockMonthInput');
             if(stockMonthInput) stockMonthInput.value = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-            // 저장된 계좌 중 첫 번째 계좌를 기본값으로 설정
             if (DataStore.state.stockAccounts && DataStore.state.stockAccounts.length > 0) {
                 this.currentStockAccount = DataStore.state.stockAccounts[0];
             }
@@ -960,18 +956,16 @@
             document.getElementById('debtCurrentAmount').innerText = currentTotal.toLocaleString();
         },
 
-        // [핵심 변경] 계좌별 필터링이 적용된 주식 모듈 렌더링
+        // [핵심 교정] 직관적인 투자 수익률 계산 로직 적용
         renderStockModule() {
             const tbody = document.getElementById('stockTableBody');
             const accountFilter = document.getElementById('stockAccountFilter');
             if (!tbody || !accountFilter) return;
 
-            // 계좌 필터 셀렉트 박스 세팅
             accountFilter.innerHTML = DataStore.state.stockAccounts.map(acc => 
                 `<option value="${Utils.escHtml(acc)}" ${acc === this.currentStockAccount ? 'selected' : ''}>${Utils.escHtml(acc)}</option>`
             ).join('');
 
-            // 현재 선택된 계좌의 데이터만 필터링
             const records = DataStore.state.stockRecords
                 .filter(r => r.account === this.currentStockAccount)
                 .sort((a, b) => (a.month > b.month ? 1 : -1));
@@ -990,8 +984,11 @@
                 const netCashFlow = deposit - withdrawal;
                 const endingBalance = Number(rec.endingBalance) || 0;
                 
+                // [교정됨] 월간 순손익 = 기말 평가액 - (전월 기말 평가액 + 입금액 - 출금액)
                 const monthlyProfit = endingBalance - (prevEndingBalance + netCashFlow);
-                const baseForReturn = prevEndingBalance + (netCashFlow / 2);
+                
+                // [교정됨] 수익률 계산 분모 = 전월 기말 평가액 + 이번 달 쏟아부은 원금(입금액)
+                const baseForReturn = prevEndingBalance + deposit; 
                 
                 let monthlyReturn = 0;
                 if (baseForReturn !== 0) {
@@ -1420,7 +1417,6 @@
             UIManager.renderDebtSimulator();
         },
 
-        // [신규] 계좌 추가
         addStockAccount() {
             const nameInput = document.getElementById('newStockAccountName');
             const name = nameInput.value.trim();
@@ -1428,13 +1424,12 @@
             if (DataStore.state.stockAccounts.includes(name)) { alert('이미 존재하는 계좌명입니다.'); return; }
             
             DataStore.state.stockAccounts.push(name);
-            UIManager.currentStockAccount = name; // 추가한 계좌로 바로 이동
+            UIManager.currentStockAccount = name; 
             DataStore.save();
             nameInput.value = '';
             UIManager.renderStockModule();
         },
 
-        // [신규] 계좌 및 해당 계좌의 데이터 전체 삭제
         deleteStockAccount() {
             const current = UIManager.currentStockAccount;
             if (current === '기본 계좌') { alert('기본 계좌는 삭제할 수 없습니다.'); return; }
@@ -1658,6 +1653,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
+                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -1776,7 +1772,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.\n나중에 복원하실 때 이 파일을 선택해주세요.`);
+                alert(`'${fileName}' 파일이 다운로드 폴더에 저장되었습니다.\n(향후 복원 시 이 파일을 선택하십시오)`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -1795,7 +1791,7 @@
                         const _assets = Array.isArray(rData.assets) ? rData.assets : [];
                         const _recurring = Array.isArray(rData.recurringTasks) ? rData.recurringTasks : [];
                         const _stocks = Array.isArray(rData.stockRecords) ? rData.stockRecords : [];
-                        const _stockAcc = Array.isArray(rData.stockAccounts) ? rData.stockAccounts : []; // 계좌 복원
+                        const _stockAcc = Array.isArray(rData.stockAccounts) ? rData.stockAccounts : [];
                         const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
                         const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
                         
