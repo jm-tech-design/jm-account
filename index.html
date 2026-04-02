@@ -187,10 +187,16 @@
 
     <div class="box">
         <div class="collapsible-header" onclick="UIManager.toggleSection('stockModuleContainer', 'stockToggleIcon')">
-            📈 주식 계좌 수익률 관리 <span id="stockToggleIcon">▼</span>
+            주식 계좌 수익률 관리 <span id="stockToggleIcon">▼</span>
         </div>
         <div id="stockModuleContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
             
+            <div class="flex-row mobile-row" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border-main);">
+                <select id="stockAccountFilter" onchange="UIManager.currentStockAccount = this.value; UIManager.renderStockModule();" class="flex-1" style="font-weight: bold; background-color: var(--bg-highlight);"></select>
+                <input type="text" id="newStockAccountName" placeholder="새 계좌명 (예: ISA)" class="flex-1">
+                <button class="std-btn bg-purple btn-fixed" onclick="AppCtrl.addStockAccount()">계좌 추가</button>
+            </div>
+
             <div class="input-area" style="margin-bottom: 15px;">
                 <div class="flex-row mobile-row">
                     <input type="month" id="stockMonthInput" class="flex-1" style="min-width: 100px;">
@@ -199,7 +205,7 @@
                 </div>
                 <div class="flex-row mobile-row">
                     <input type="number" id="stockEndingBalanceInput" placeholder="월말 계좌 총 평가액 (필수)" class="flex-1" style="min-width: 100px;">
-                    <button class="std-btn bg-blue flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">기록 저장</button>
+                    <button class="std-btn bg-blue flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">선택 계좌에 기록 저장</button>
                 </div>
             </div>
 
@@ -223,6 +229,10 @@
                     <tbody id="stockTableBody">
                     </tbody>
                 </table>
+            </div>
+            
+            <div style="text-align: right; margin-top: 10px;">
+                <button class="util-btn btn-del" onclick="AppCtrl.deleteStockAccount()">현재 계좌 전체 삭제</button>
             </div>
         </div>
     </div>
@@ -434,8 +444,8 @@
     // 2. DataStore
     // ==========================================
     const DataStore = {
-        // [신규 추가] stockRecords 배열 추가
-        state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {}, stockRecords: [] },
+        // [신규 추가] stockAccounts 배열을 추가하여 다중 계좌 관리
+        state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {}, stockRecords: [], stockAccounts: [] },
         history: { stack: [], pointer: -1, MAX: 5 },
         
         safeParse(key, defaultVal) {
@@ -467,9 +477,12 @@
             this.state.recurringTasks = this.safeParse('accountRecurring_v2', []);
             if (!Array.isArray(this.state.recurringTasks)) this.state.recurringTasks = [];
             
-            // [신규 추가] 주식 기록 로드
             this.state.stockRecords = this.safeParse('accountStocks', []);
             if (!Array.isArray(this.state.stockRecords)) this.state.stockRecords = [];
+
+            // [신규 추가] 주식 계좌 로드 및 초기화
+            this.state.stockAccounts = this.safeParse('accountStockAccounts', []);
+            if (!Array.isArray(this.state.stockAccounts)) this.state.stockAccounts = [];
             
             this.state.monthlyMemos = this.safeParse('accountMonthlyMemos', {});
             if (typeof this.state.monthlyMemos !== 'object' || this.state.monthlyMemos === null) this.state.monthlyMemos = {};
@@ -511,6 +524,19 @@
                     }
                     if(e.excludeStatsOnly === undefined) { e.excludeStatsOnly = false; changed = true; }
                 });
+
+                // [신규 추가] 구버전 주식 데이터를 위한 계좌명(기본 계좌) 마이그레이션
+                if (!this.state.stockAccounts || this.state.stockAccounts.length === 0) {
+                    this.state.stockAccounts = ['기본 계좌'];
+                    changed = true;
+                }
+                this.state.stockRecords.forEach(r => {
+                    if (!r.account) {
+                        r.account = '기본 계좌';
+                        changed = true;
+                    }
+                });
+
                 if (changed) this.save();
             } catch (e) {
                 console.error("마이그레이션 오류 발생:", e);
@@ -538,7 +564,8 @@
                 localStorage.setItem('accountRecurring_v2', JSON.stringify(this.state.recurringTasks));
                 localStorage.setItem('accountMonthlyMemos', JSON.stringify(this.state.monthlyMemos));
                 localStorage.setItem('accountSettings', JSON.stringify(this.state.settings));
-                localStorage.setItem('accountStocks', JSON.stringify(this.state.stockRecords)); // 주식 데이터 저장
+                localStorage.setItem('accountStocks', JSON.stringify(this.state.stockRecords));
+                localStorage.setItem('accountStockAccounts', JSON.stringify(this.state.stockAccounts)); // 계좌 저장
             } catch (e) {
                 if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업(JSON) 후 오래된 내역을 삭제하세요.');
             }
@@ -583,8 +610,9 @@
         currentAssetEditId: null,
         currentSettlementYear: null,
         expenseChartObj: null,
-        stockChartObj: null, // 주식 차트 객체 보관용
+        stockChartObj: null, 
         searchTimeout: null,
+        currentStockAccount: '기본 계좌', // [추가됨] 현재 선택된 주식 계좌 상태값
 
         debouncedRender() {
             if (this.searchTimeout) clearTimeout(this.searchTimeout);
@@ -603,9 +631,13 @@
             if(searchYearSelect) searchYearSelect.innerHTML = optionsHtml;
             document.getElementById('monthFilter').value = String(new Date().getMonth() + 1).padStart(2, '0');
             
-            // 주식 모듈 입력창 기본값 세팅 (현재 월)
             const stockMonthInput = document.getElementById('stockMonthInput');
             if(stockMonthInput) stockMonthInput.value = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+            // 저장된 계좌 중 첫 번째 계좌를 기본값으로 설정
+            if (DataStore.state.stockAccounts && DataStore.state.stockAccounts.length > 0) {
+                this.currentStockAccount = DataStore.state.stockAccounts[0];
+            }
         },
 
         renderAll() { this.renderColManagement(); this.renderInputForm(); this.render(); },
@@ -928,14 +960,23 @@
             document.getElementById('debtCurrentAmount').innerText = currentTotal.toLocaleString();
         },
 
-        // [신규 추가] 주식 자산 렌더링 로직 (Modified Dietz 적용)
+        // [핵심 변경] 계좌별 필터링이 적용된 주식 모듈 렌더링
         renderStockModule() {
             const tbody = document.getElementById('stockTableBody');
-            if (!tbody) return;
+            const accountFilter = document.getElementById('stockAccountFilter');
+            if (!tbody || !accountFilter) return;
 
-            const records = [...DataStore.state.stockRecords].sort((a, b) => (a.month > b.month ? 1 : -1));
-            let html = '';
+            // 계좌 필터 셀렉트 박스 세팅
+            accountFilter.innerHTML = DataStore.state.stockAccounts.map(acc => 
+                `<option value="${Utils.escHtml(acc)}" ${acc === this.currentStockAccount ? 'selected' : ''}>${Utils.escHtml(acc)}</option>`
+            ).join('');
+
+            // 현재 선택된 계좌의 데이터만 필터링
+            const records = DataStore.state.stockRecords
+                .filter(r => r.account === this.currentStockAccount)
+                .sort((a, b) => (a.month > b.month ? 1 : -1));
             
+            let html = '';
             let chartLabels = [];
             let chartProfitData = [];
             let chartCumReturnData = [];
@@ -949,17 +990,14 @@
                 const netCashFlow = deposit - withdrawal;
                 const endingBalance = Number(rec.endingBalance) || 0;
                 
-                // 월간 손익 계산: 기말 자산 - (기초 자산 + 순입금액)
                 const monthlyProfit = endingBalance - (prevEndingBalance + netCashFlow);
-                
-                // 수익률 계산 (수정 디츠 방법): 월간 손익 / (기초 자산 + 순입금액/2)
                 const baseForReturn = prevEndingBalance + (netCashFlow / 2);
+                
                 let monthlyReturn = 0;
                 if (baseForReturn !== 0) {
                     monthlyReturn = (monthlyProfit / baseForReturn) * 100;
                 }
 
-                // 누적 데이터 갱신
                 totalInvested += netCashFlow;
                 if(totalInvested !== 0) {
                     cumulativeReturn = ((endingBalance - totalInvested) / totalInvested) * 100;
@@ -969,12 +1007,10 @@
 
                 prevEndingBalance = endingBalance;
 
-                // 차트 데이터 수집
                 chartLabels.push(rec.month);
                 chartProfitData.push(monthlyProfit);
                 chartCumReturnData.push(cumulativeReturn.toFixed(2));
 
-                // 테이블 행 생성
                 let returnColor = monthlyReturn > 0 ? 'var(--color-income)' : (monthlyReturn < 0 ? 'var(--color-expense)' : 'inherit');
                 let returnSign = monthlyReturn > 0 ? '+' : '';
                 
@@ -986,19 +1022,17 @@
                     <td style="text-align:right; color:${returnColor};"><span class="num-wrap">${monthlyProfit > 0 ? '+' : ''}${monthlyProfit.toLocaleString()}</span></td>
                     <td style="text-align:center; color:${returnColor}; font-weight:bold;">${returnSign}${monthlyReturn.toFixed(2)}%</td>
                     <td><button class="util-btn btn-del" onclick="AppCtrl.deleteStockRecord('${rec.id}')">삭제</button></td>
-                </tr>` + html; // 최신 데이터가 위로 오도록 역순 추가
+                </tr>` + html;
             });
 
             if (records.length === 0) {
-                html = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">기록된 주식 자산 내역이 없습니다.</td></tr>';
+                html = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">[${Utils.escHtml(this.currentStockAccount)}] 기록이 없습니다.</td></tr>`;
             }
             tbody.innerHTML = html;
 
-            // 주식 듀얼 차트 렌더링
             this.renderStockChart(chartLabels, chartProfitData, chartCumReturnData);
         },
 
-        // [신규 추가] 주식 수익률 듀얼 차트
         renderStockChart(labels, profitData, cumReturnData) {
             if (typeof Chart === 'undefined') return;
 
@@ -1057,7 +1091,7 @@
                             ticks: {
                                 callback: function(value) {
                                     if(value === 0) return 0;
-                                    return (value / 10000).toFixed(0) + '만'; // 만원 단위 축약
+                                    return (value / 10000).toFixed(0) + '만'; 
                                 }
                             }
                         },
@@ -1219,7 +1253,7 @@
         render() {
             try { this.calculateAndRenderAssets(); } catch(e) { console.error("Asset Error:", e); }
             try { this.renderDebtSimulator(); } catch(e) { console.error("Debt Sim Error:", e); }
-            try { this.renderStockModule(); } catch(e) { console.error("Stock Module Error:", e); } // 주식 모듈 렌더링
+            try { this.renderStockModule(); } catch(e) { console.error("Stock Module Error:", e); }
             try { this.updateDescDatalist(); } catch(e) { console.error("Datalist Error:", e); }
             try { this.syncMonthlyMemoUI(); } catch(e) { console.error("Memo Error:", e); }
             try { this.renderCalendar(); } catch(e) { console.error("Calendar Error:", e); }
@@ -1386,8 +1420,36 @@
             UIManager.renderDebtSimulator();
         },
 
-        // [신규 추가] 주식 내역 추가 로직
+        // [신규] 계좌 추가
+        addStockAccount() {
+            const nameInput = document.getElementById('newStockAccountName');
+            const name = nameInput.value.trim();
+            if (!name) { alert('새 계좌명을 입력하십시오.'); return; }
+            if (DataStore.state.stockAccounts.includes(name)) { alert('이미 존재하는 계좌명입니다.'); return; }
+            
+            DataStore.state.stockAccounts.push(name);
+            UIManager.currentStockAccount = name; // 추가한 계좌로 바로 이동
+            DataStore.save();
+            nameInput.value = '';
+            UIManager.renderStockModule();
+        },
+
+        // [신규] 계좌 및 해당 계좌의 데이터 전체 삭제
+        deleteStockAccount() {
+            const current = UIManager.currentStockAccount;
+            if (current === '기본 계좌') { alert('기본 계좌는 삭제할 수 없습니다.'); return; }
+            
+            if (confirm(`[${current}] 계좌와 해당 계좌의 모든 수익률 기록을 영구히 삭제하시겠습니까?`)) {
+                DataStore.state.stockAccounts = DataStore.state.stockAccounts.filter(acc => acc !== current);
+                DataStore.state.stockRecords = DataStore.state.stockRecords.filter(rec => rec.account !== current);
+                UIManager.currentStockAccount = '기본 계좌';
+                DataStore.save();
+                UIManager.renderStockModule();
+            }
+        },
+
         addStockRecord() {
+            const account = UIManager.currentStockAccount;
             const monthStr = document.getElementById('stockMonthInput').value;
             const deposit = parseInt(document.getElementById('stockDepositInput').value) || 0;
             const withdrawal = parseInt(document.getElementById('stockWithdrawalInput').value) || 0;
@@ -1396,12 +1458,11 @@
             if (!monthStr) { alert('연/월을 선택하십시오.'); return; }
             if (isNaN(endingBalance)) { alert('월말 총 평가액을 입력하십시오.'); return; }
 
-            // 중복 월 체크 (덮어쓰기)
-            const existingIdx = DataStore.state.stockRecords.findIndex(r => r.month === monthStr);
-            const record = { id: 'stk_' + Utils.generateID(), month: monthStr, deposit, withdrawal, endingBalance };
+            const existingIdx = DataStore.state.stockRecords.findIndex(r => r.month === monthStr && r.account === account);
+            const record = { id: 'stk_' + Utils.generateID(), account, month: monthStr, deposit, withdrawal, endingBalance };
 
             if (existingIdx !== -1) {
-                if(confirm(`${monthStr} 내역이 이미 존재합니다. 덮어쓰시겠습니까?`)) {
+                if(confirm(`[${account}] ${monthStr} 내역이 이미 존재합니다. 덮어쓰시겠습니까?`)) {
                     DataStore.state.stockRecords[existingIdx] = record;
                 } else return;
             } else {
@@ -1412,13 +1473,11 @@
             DataStore.pushState();
             UIManager.renderStockModule();
 
-            // 입력창 초기화
             document.getElementById('stockDepositInput').value = '';
             document.getElementById('stockWithdrawalInput').value = '';
             document.getElementById('stockEndingBalanceInput').value = '';
         },
 
-        // [신규 추가] 주식 내역 삭제
         deleteStockRecord(id) {
             if(confirm('이 달의 주식 기록을 삭제하시겠습니까? (이후 달의 누적 수익률 계산이 변동됩니다)')) {
                 DataStore.state.stockRecords = DataStore.state.stockRecords.filter(r => r.id !== id);
@@ -1599,7 +1658,6 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -1718,7 +1776,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 다운로드 폴더에 저장되었습니다.\n(향후 복원 시 이 파일을 선택하십시오)`);
+                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.\n나중에 복원하실 때 이 파일을 선택해주세요.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -1736,7 +1794,8 @@
                         const _customCols = Array.isArray(rData.customCols) ? rData.customCols : [];
                         const _assets = Array.isArray(rData.assets) ? rData.assets : [];
                         const _recurring = Array.isArray(rData.recurringTasks) ? rData.recurringTasks : [];
-                        const _stocks = Array.isArray(rData.stockRecords) ? rData.stockRecords : []; // 주식 데이터 복원
+                        const _stocks = Array.isArray(rData.stockRecords) ? rData.stockRecords : [];
+                        const _stockAcc = Array.isArray(rData.stockAccounts) ? rData.stockAccounts : []; // 계좌 복원
                         const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
                         const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
                         
@@ -1744,7 +1803,8 @@
                         localStorage.setItem('accountCols', JSON.stringify(_customCols));
                         localStorage.setItem('accountAssets', JSON.stringify(_assets));
                         localStorage.setItem('accountRecurring_v2', JSON.stringify(_recurring));
-                        localStorage.setItem('accountStocks', JSON.stringify(_stocks)); // 주식 데이터 저장
+                        localStorage.setItem('accountStocks', JSON.stringify(_stocks));
+                        localStorage.setItem('accountStockAccounts', JSON.stringify(_stockAcc));
                         localStorage.setItem('accountMonthlyMemos', JSON.stringify(_memos));
                         localStorage.setItem('accountSettings', JSON.stringify(_settings));
                         
