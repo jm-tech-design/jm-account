@@ -222,7 +222,8 @@
                             <th>출금</th>
                             <th>월말 총액</th>
                             <th>월 순손익</th>
-                            <th>수익률</th>
+                            <th>월 수익률</th>
+                            <th>누적 수익률</th>
                             <th>관리</th>
                         </tr>
                     </thead>
@@ -956,7 +957,7 @@
             document.getElementById('debtCurrentAmount').innerText = currentTotal.toLocaleString();
         },
 
-        // [핵심 교정] 직관적인 투자 수익률 계산 로직 적용
+        // [변경됨] 테이블에 월 수익률과 누적 수익률 독립 표시
         renderStockModule() {
             const tbody = document.getElementById('stockTableBody');
             const accountFilter = document.getElementById('stockAccountFilter');
@@ -984,10 +985,7 @@
                 const netCashFlow = deposit - withdrawal;
                 const endingBalance = Number(rec.endingBalance) || 0;
                 
-                // [교정됨] 월간 순손익 = 기말 평가액 - (전월 기말 평가액 + 입금액 - 출금액)
                 const monthlyProfit = endingBalance - (prevEndingBalance + netCashFlow);
-                
-                // [교정됨] 수익률 계산 분모 = 전월 기말 평가액 + 이번 달 쏟아부은 원금(입금액)
                 const baseForReturn = prevEndingBalance + deposit; 
                 
                 let monthlyReturn = 0;
@@ -1011,6 +1009,9 @@
                 let returnColor = monthlyReturn > 0 ? 'var(--color-income)' : (monthlyReturn < 0 ? 'var(--color-expense)' : 'inherit');
                 let returnSign = monthlyReturn > 0 ? '+' : '';
                 
+                let cumReturnColor = cumulativeReturn > 0 ? 'var(--color-income)' : (cumulativeReturn < 0 ? 'var(--color-expense)' : 'inherit');
+                let cumReturnSign = cumulativeReturn > 0 ? '+' : '';
+                
                 html = `<tr>
                     <td>${Utils.escHtml(rec.month)}</td>
                     <td class="text-blue" style="text-align:right;"><span class="num-wrap">${deposit > 0 ? deposit.toLocaleString() : '-'}</span></td>
@@ -1018,12 +1019,13 @@
                     <td style="text-align:right; font-weight:bold;"><span class="num-wrap">${endingBalance.toLocaleString()}</span></td>
                     <td style="text-align:right; color:${returnColor};"><span class="num-wrap">${monthlyProfit > 0 ? '+' : ''}${monthlyProfit.toLocaleString()}</span></td>
                     <td style="text-align:center; color:${returnColor}; font-weight:bold;">${returnSign}${monthlyReturn.toFixed(2)}%</td>
+                    <td style="text-align:center; color:${cumReturnColor}; font-weight:bold;">${cumReturnSign}${cumulativeReturn.toFixed(2)}%</td>
                     <td><button class="util-btn btn-del" onclick="AppCtrl.deleteStockRecord('${rec.id}')">삭제</button></td>
                 </tr>` + html;
             });
 
             if (records.length === 0) {
-                html = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">[${Utils.escHtml(this.currentStockAccount)}] 기록이 없습니다.</td></tr>`;
+                html = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">[${Utils.escHtml(this.currentStockAccount)}] 기록이 없습니다.</td></tr>`;
             }
             tbody.innerHTML = html;
 
@@ -1653,7 +1655,6 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
