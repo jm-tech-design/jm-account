@@ -1,6 +1,6 @@
-const CACHE_NAME = 'jm-account-book-v4';
+const CACHE_NAME = 'jm-account-book-v1';
 const urlsToCache = [
-  './index.html',
+  './',
   './manifest.json',
   'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css'
 ];
