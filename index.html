@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* === 미니멀리즘 테마 색상 변수 === */
         :root {
             --bg-main: #f0f2f5; --bg-box: #ffffff; --bg-sub: #fafbfc; --bg-input: #f9f9fa;
             --text-main: #2d3436; --text-title: #1e272e; 
@@ -145,6 +146,9 @@
         .simple-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
         .simple-list li:last-child { border-bottom: none; }
 
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--modal-overlay); align-items: center; justify-content: center; }
+        .modal-content { background-color: var(--bg-box); padding: 25px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: var(--shadow-md); animation: fadeIn 0.2s; max-height: 80vh; overflow-y: auto; }
+        
         @media screen and (max-width: 768px) {
             .mobile-row { flex-wrap: wrap !important; gap: 8px !important; margin-bottom: 8px !important; }
             .mobile-row > * { flex: 1 1 45%; min-width: 100px !important; width: auto; }
@@ -338,7 +342,6 @@
             </div>
         </div>
 
-
         <div id="tab-assets" class="tab-content">
             
             <div class="box">
@@ -476,7 +479,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v4.1<br>
+                통합 자산 가계부 System v4.2<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -683,10 +686,13 @@
         mode: 'unlock', 
         tempPin: '',
         currentInput: '',
-        hasUnlocked: false, // [신규] 렌더링 지연 제어 플래그
+        hasUnlocked: false, 
         
         init() {
-            if (DataStore.state.settings.appPin) {
+            // [수정됨] 세션 스토리지를 활용하여 새로고침 시 자물쇠 패스
+            const isSessionUnlocked = sessionStorage.getItem('jm_app_unlocked') === 'true';
+            
+            if (DataStore.state.settings.appPin && !isSessionUnlocked) {
                 this.showLockScreen('unlock');
             } else {
                 this.unlockApp();
@@ -724,10 +730,16 @@
             document.getElementById('appWrapper').style.display = 'block';
             this.updateSettingsUI();
             
-            // [개선] 잠금 해제 직후 디스플레이가 켜진 상태에서 렌더링을 시작하여 차트 깨짐 방지
+            // [수정됨] 통행증 발급 (탭이 닫히기 전까지 유지)
+            sessionStorage.setItem('jm_app_unlocked', 'true');
+            
+            // [수정됨] 화면이 완전히 그려진 후(0.05초 뒤)에 차트와 데이터 렌더링 강제 실행
             if (!this.hasUnlocked) {
-                AppCtrl.checkRecurringTasks(); 
-                UIManager.goToCurrentMonth();
+                setTimeout(() => {
+                    UIManager.renderAll();
+                    AppCtrl.checkRecurringTasks(); 
+                    UIManager.syncDateInputWithFilter();
+                }, 50);
                 this.hasUnlocked = true;
             } else {
                 UIManager.renderAll();
@@ -798,6 +810,7 @@
                 if (val === currentPin) {
                     delete DataStore.state.settings.appPin;
                     DataStore.save();
+                    sessionStorage.removeItem('jm_app_unlocked'); // 해제 시 통행증도 삭제
                     alert('PIN 잠금이 해제되었습니다.');
                     this.unlockApp();
                 } else {
@@ -1722,9 +1735,9 @@
         init() { 
             DataStore.init(); 
             UIManager.initFilters(); 
+            
+            // 앱이 켜질 때 잠금 화면 검사부터 실행
             AuthCtrl.init();
-            this.checkRecurringTasks(); 
-            UIManager.syncDateInputWithFilter(); 
         },
         
         saveMonthlyMemo() { UIManager.saveMonthlyMemo(); },
@@ -2008,6 +2021,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
+                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -2136,7 +2150,6 @@
             const file = event.target.files[0]; if (!file) return;
             if(!confirm('기존 데이터가 덮어씌워집니다. 진행하시겠습니까?')) { event.target.value = ''; return; }
             
-            // [개선] 복원 시 현재 기기의 PIN 번호 피난 (백업 파일에 의해 덮어씌워지는 것 방지)
             const preservedPin = DataStore.state.settings.appPin;
 
             const reader = new FileReader();
@@ -2154,7 +2167,6 @@
                         const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
                         const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
                         
-                        // [개선] 피난시켰던 PIN 복구
                         if (preservedPin) {
                             _settings.appPin = preservedPin;
                         }
@@ -2177,15 +2189,16 @@
         }
     };
 
-    AppCtrl.init();
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+    // DOMContentLoaded 대신 window.onload를 사용하여 브라우저 렌더링 준비 후 실행되도록 보장
+    window.addEventListener('load', () => {
+        AppCtrl.init();
+        
+        if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
                 .then(reg => console.log('Service Worker 등록 완료:', reg.scope))
                 .catch(err => console.error('Service Worker 등록 실패:', err));
-        });
-    }
+        }
+    });
 </script>
 
 </body>
