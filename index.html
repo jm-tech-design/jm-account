@@ -18,13 +18,14 @@
         /* === 미니멀리즘 테마 색상 변수 === */
         :root {
             --bg-main: #f0f2f5; --bg-box: #ffffff; --bg-sub: #fafbfc; --bg-input: #f9f9fa;
-            --text-main: #2d3436; --text-title: #1e272e; --text-muted: #b2bec3;
+            --text-main: #2d3436; --text-title: #1e272e; 
+            --text-muted: #636e72; /* [수정됨] 라이트 테마 가독성 향상을 위해 더 진한 회색으로 보정 */
             --border-main: transparent; --border-input: #dfe6e9; --border-light: #f1f2f6;
             --color-income: #0984e3; --color-expense: #d63031; --color-warning: #e17055; --color-primary: #6c5ce7;
             --bg-table-head: #f5f6fa; --text-table-head: #2d3436;
             --bg-highlight: #e3f2fd; --border-highlight: #74b9ff;
             --bg-carried: #fff9c4; --bg-excluded: #f5f6fa; --bg-chart: #dfe6e9;
-            --bg-main-card: #2d3436; --text-main-card: #ffffff; /* [수정] 메인카드 독립 변수 */
+            --bg-main-card: #2d3436; --text-main-card: #ffffff;
             --modal-overlay: rgba(0,0,0,0.5);
             --shadow-sm: 0 2px 8px rgba(0,0,0,0.04); --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
         }
@@ -32,13 +33,14 @@
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-main: #121212; --bg-box: #1e1e1e; --bg-sub: #252525; --bg-input: #2c2c2c;
-                --text-main: #e0e0e0; --text-title: #ffffff; --text-muted: #888888;
+                --text-main: #e0e0e0; --text-title: #ffffff; 
+                --text-muted: #888888; /* 다크모드에서는 밝은 회색 유지 */
                 --border-main: transparent; --border-input: #444444; --border-light: #333333;
                 --color-income: #74b9ff; --color-expense: #ff7675; --color-warning: #fab1a0; --color-primary: #a29bfe;
                 --bg-table-head: #2d3436; --text-table-head: #e0e0e0;
                 --bg-highlight: #2c3e50; --border-highlight: #34495e;
                 --bg-carried: #3e3b22; --bg-excluded: #222222; --bg-chart: #444444;
-                --bg-main-card: #6c5ce7; --text-main-card: #ffffff; /* [수정] 다크모드 메인카드 보정 */
+                --bg-main-card: #6c5ce7; --text-main-card: #ffffff; 
                 --modal-overlay: rgba(0,0,0,0.8);
                 --shadow-sm: 0 2px 8px rgba(0,0,0,0.4); --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
             }
@@ -55,15 +57,14 @@
         .date-btn { background: transparent; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 5px 15px; }
         .date-btn:active { color: var(--color-primary); }
         
-        /* [수정] 텍스트 단차 정렬 보정 */
         .date-selects { display: flex; align-items: center; gap: 3px; height: 100%; }
         .date-selects select { appearance: none; background: transparent; border: none; font-size: 16px; font-weight: 800; color: var(--text-title); cursor: pointer; text-align: center; padding: 0; margin: 0; outline: none; font-family: inherit; line-height: 1; }
         .date-selects span { line-height: 1; margin-top: 1px; } 
 
         .btn-today { font-size: 11px; padding: 4px 10px; background: var(--border-light); color: var(--text-main); border-radius: 12px; font-weight: bold; border: none; cursor: pointer; }
 
-        /* [수정] 언두/리두 버튼 확대 */
-        .history-btn { font-size: 18px; padding: 0 14px; border-radius: 10px; font-weight: bold; background: var(--border-light); color: var(--text-main); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 32px; transition: background 0.2s; }
+        /* [수정됨] 언두/리두 버튼: 콤팩트한 정사각형 비율로 중앙 레이아웃 침범 방지 */
+        .history-btn { width: 32px; height: 32px; padding: 0; font-size: 18px; border-radius: 8px; font-weight: bold; background: var(--border-light); color: var(--text-main); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
         .history-btn:disabled { cursor: not-allowed; opacity: 0.3 !important; }
         .history-btn:active { background: var(--border-input); }
 
@@ -136,6 +137,10 @@
         .simple-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
         .simple-list li:last-child { border-bottom: none; }
 
+        /* 모달 */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--modal-overlay); align-items: center; justify-content: center; }
+        .modal-content { background-color: var(--bg-box); padding: 25px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: var(--shadow-md); animation: fadeIn 0.2s; max-height: 80vh; overflow-y: auto; }
+        
         /* 모바일 보정 */
         @media screen and (max-width: 768px) {
             .mobile-row { flex-wrap: wrap !important; gap: 8px !important; margin-bottom: 8px !important; }
@@ -204,7 +209,7 @@
 
         <div class="box">
             <div class="collapsible-header" onclick="UIManager.toggleSection('monthlyMemoContainer', 'monthlyMemoToggleIcon')">
-                <span>📝 월간 메모</span>
+                <span id="monthlyMemoTitle">📝 월간 메모</span>
                 <div>
                     <span id="monthlyMemoIndicator" style="color:var(--color-expense); font-size:12px; margin-right:8px; display:none;">[메모 있음]</span>
                     <span id="monthlyMemoToggleIcon">▼</span>
@@ -261,6 +266,7 @@
                 <span>📋 상세 내역</span>
                 <input type="text" id="searchInput" placeholder="검색..." oninput="UIManager.debouncedRender()" style="width: 120px; height: 30px; font-size: 12px; font-weight: normal;">
             </div>
+            <select id="searchYearFilter" onchange="UIManager.render()" style="display:none;"></select>
             <div class="table-container">
                 <table>
                     <thead id="tableHead"></thead>
@@ -286,8 +292,8 @@
         </div>
 
         <div class="box">
-            <div class="box-title" style="color: var(--color-primary);">
-                <span>📑 연도 결산 리포트 (<span id="settlementYearLabel"></span>년)</span>
+            <div class="box-title" style="color: var(--color-primary);" id="settlementBoxTitle">
+                📑 연도 결산 리포트
             </div>
             <div id="settlementChartContainer" class="settlement-chart-container"></div>
             <div style="text-align:center; font-size:11px; margin-bottom:15px; font-weight: bold;">
@@ -324,7 +330,7 @@
                     <input type="date" id="newAssetDate"><input type="date" id="newAssetMaturity">
                 </div>
                 <div class="flex-row mobile-row" style="margin-bottom: 0;">
-                    <button id="submitAssetBtn" class="std-btn bg-blue flex-1 btn-fixed" onclick="AppCtrl.addAsset()">추가하기</button>
+                    <button id="submitAssetBtn" class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addAsset()">추가하기</button>
                     <button id="cancelAssetEditBtn" class="std-btn btn-gray flex-1 btn-fixed" onclick="UIManager.cancelAssetEdit()" style="display:none;">취소</button>
                 </div>
             </div>
@@ -375,9 +381,9 @@
                     <thead>
                         <tr>
                             <th>월</th>
-                            <th>순입금</th>
-                            <th>총액</th>
-                            <th>수익률</th>
+                            <th style="text-align:right;">순입금</th>
+                            <th style="text-align:right;">총액</th>
+                            <th style="text-align:center;">수익률</th>
                             <th>관리</th>
                         </tr>
                     </thead>
@@ -429,7 +435,7 @@
         </div>
         
         <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-            통합 자산 가계부 System v3.1<br>
+            통합 자산 가계부 System v3.2<br>
             Designed by JM Mentor
         </div>
     </div>
@@ -450,6 +456,8 @@
         <span class="tab-icon">⚙️</span><span>설정</span>
     </div>
 </div>
+
+<div id="settlementModal" class="modal"></div>
 
 <datalist id="descHistoryList"></datalist>
 <datalist id="noteHistoryList"></datalist>
@@ -1132,7 +1140,6 @@
             this.renderStockChart(chartLabels, chartProfitData, chartCumReturnData);
         },
 
-        // [수정] 차트 글자색 시스템 변수 연동
         renderStockChart(labels, profitData, cumReturnData) {
             if (typeof Chart === 'undefined') return;
 
@@ -1250,7 +1257,6 @@
             html += '</div>'; calDiv.innerHTML = html;
         },
 
-        // [수정] 차트 글자색 시스템 변수 연동
         renderChart(filteredEntries, periodLabel, isSearchActive) {
             if (typeof Chart === 'undefined') {
                 const emptyEl = document.getElementById('expenseChartEmpty');
@@ -1334,6 +1340,61 @@
                     }
                 }
             });
+        },
+
+        // [수정됨] 연도 결산 리포트 타이틀의 공백 제거 및 글로벌 연동
+        renderYearlySettlement() {
+            let yearStr = document.getElementById('yearFilter').value;
+            if (yearStr === 'all') yearStr = new Date().getFullYear().toString(); 
+            this.currentSettlementYear = parseInt(yearStr);
+
+            let yInc = 0; let yExp = 0; const mData = {};
+            for(let i=1; i<=12; i++) mData[String(i).padStart(2, '0')] = { income: 0, expense: 0 };
+
+            DataStore.state.entries.forEach(e => {
+                if (!e.exclude && !e.excludeStatsOnly && e.date?.startsWith(yearStr)) {
+                    const m = e.date.substring(5, 7);
+                    if(mData[m]) { mData[m].income += (e.income || 0); mData[m].expense += (e.expense || 0); yInc += (e.income || 0); yExp += (e.expense || 0); }
+                }
+            });
+
+            let maxV = 0; for(let i=1; i<=12; i++) { const m = String(i).padStart(2, '0'); maxV = Math.max(maxV, mData[m].income, mData[m].expense); }
+
+            let tbHtml = ''; let chHtml = '';
+            for(let i=1; i<=12; i++) {
+                const m = String(i).padStart(2, '0'); const inc = mData[m].income; const exp = mData[m].expense; const net = inc - exp;
+                tbHtml += `<tr><td><strong>${i}월</strong></td><td class="text-blue" style="text-align:right;"><span class="num-wrap">${inc.toLocaleString()}</span></td><td class="text-red" style="text-align:right;"><span class="num-wrap">${exp.toLocaleString()}</span></td><td style="color:${net > 0 ? 'var(--color-income)' : (net < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; font-weight:800; text-align:right;"><span class="num-wrap">${net > 0 ? '+' : ''}${net.toLocaleString()}</span></td></tr>`;
+                
+                let hInc = maxV === 0 ? 0 : (inc/maxV)*100;
+                let hExp = maxV === 0 ? 0 : (exp/maxV)*100;
+                chHtml += `<div class="settlement-bar-group"><div class="settlement-bars"><div class="settlement-bar-inc" style="height:${hInc}%;" title="수입: ${inc.toLocaleString()}원"></div><div class="settlement-bar-exp" style="height:${hExp}%;" title="지출: ${exp.toLocaleString()}원"></div></div><div class="settlement-month-label">${i}월</div></div>`;
+            }
+            const yNet = yInc - yExp;
+            tbHtml += `<tr style="background-color: var(--bg-highlight); font-weight: 800; border-top: 2px solid var(--border-main);"><td>연 누적</td><td class="text-blue" style="text-align:right;"><span class="num-wrap">${yInc.toLocaleString()}</span></td><td class="text-red" style="text-align:right;"><span class="num-wrap">${yExp.toLocaleString()}</span></td><td style="color:${yNet > 0 ? 'var(--color-income)' : (yNet < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; text-align:right;"><span class="num-wrap">${yNet > 0 ? '+' : ''}${yNet.toLocaleString()}</span></td></tr>`;
+
+            const tbody = document.getElementById('settlementTbody');
+            if(tbody) tbody.innerHTML = tbHtml;
+            
+            // [수정됨] 타이틀 자바스크립트 주입으로 괄호 여백 100% 제거
+            const boxTitle = document.getElementById('settlementBoxTitle');
+            if(boxTitle) boxTitle.innerText = `📑 연도 결산 리포트(${yearStr}년)`;
+            
+            const chartCont = document.getElementById('settlementChartContainer');
+            if(chartCont) chartCont.innerHTML = chHtml;
+        },
+        
+        changeGlobalYear(direction) {
+            const ys = document.getElementById('yearFilter');
+            let currentYear = parseInt(ys.value);
+            if (isNaN(currentYear)) currentYear = new Date().getFullYear();
+            
+            let targetYear = currentYear + direction;
+            let exists = Array.from(ys.options).some(o => parseInt(o.value) === targetYear);
+            if (exists) {
+                ys.value = targetYear.toString();
+                this.syncDateInputWithFilter();
+                this.render();
+            }
         },
 
         render() {
@@ -1429,59 +1490,6 @@
             if(document.getElementById('sumBalance')) document.getElementById('sumBalance').innerText = (isSearchActive ? pNet : carriedBalance + pNet).toLocaleString();
 
             try { this.renderChart(filteredEntries, pLabel, isSearchActive); } catch(e) { console.error("Chart Error:", e); }
-        },
-
-        openYearlySettlement(targetYear) {
-            let year = targetYear || document.getElementById('yearFilter').value;
-            if (year === 'all') year = new Date().getFullYear().toString(); 
-            this.currentSettlementYear = parseInt(year);
-
-            let yInc = 0; let yExp = 0; const mData = {};
-            for(let i=1; i<=12; i++) mData[String(i).padStart(2, '0')] = { income: 0, expense: 0 };
-
-            DataStore.state.entries.forEach(e => {
-                if (!e.exclude && !e.excludeStatsOnly && e.date?.startsWith(year.toString())) {
-                    const m = e.date.substring(5, 7);
-                    if(mData[m]) { mData[m].income += (e.income || 0); mData[m].expense += (e.expense || 0); yInc += (e.income || 0); yExp += (e.expense || 0); }
-                }
-            });
-
-            let maxV = 0; for(let i=1; i<=12; i++) { const m = String(i).padStart(2, '0'); maxV = Math.max(maxV, mData[m].income, mData[m].expense); }
-
-            let tbHtml = ''; let chHtml = '';
-            for(let i=1; i<=12; i++) {
-                const m = String(i).padStart(2, '0'); const inc = mData[m].income; const exp = mData[m].expense; const net = inc - exp;
-                tbHtml += `<tr><td><strong>${i}월</strong></td><td class="text-blue" style="text-align:right;"><span class="num-wrap">${inc.toLocaleString()}</span></td><td class="text-red" style="text-align:right;"><span class="num-wrap">${exp.toLocaleString()}</span></td><td style="color:${net > 0 ? 'var(--color-income)' : (net < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; font-weight:800; text-align:right;"><span class="num-wrap">${net > 0 ? '+' : ''}${net.toLocaleString()}</span></td></tr>`;
-                
-                let hInc = maxV === 0 ? 0 : (inc/maxV)*100;
-                let hExp = maxV === 0 ? 0 : (exp/maxV)*100;
-                chHtml += `<div class="settlement-bar-group"><div class="settlement-bars"><div class="settlement-bar-inc" style="height:${hInc}%;" title="수입: ${inc.toLocaleString()}원"></div><div class="settlement-bar-exp" style="height:${hExp}%;" title="지출: ${exp.toLocaleString()}원"></div></div><div class="settlement-month-label">${i}월</div></div>`;
-            }
-            const yNet = yInc - yExp;
-            tbHtml += `<tr style="background-color: var(--bg-highlight); font-weight: 800; border-top: 2px solid var(--border-main);"><td>연 누적</td><td class="text-blue" style="text-align:right;"><span class="num-wrap">${yInc.toLocaleString()}</span></td><td class="text-red" style="text-align:right;"><span class="num-wrap">${yExp.toLocaleString()}</span></td><td style="color:${yNet > 0 ? 'var(--color-income)' : (yNet < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; text-align:right;"><span class="num-wrap">${yNet > 0 ? '+' : ''}${yNet.toLocaleString()}</span></td></tr>`;
-
-            const tbody = document.getElementById('settlementTbody');
-            if(tbody) tbody.innerHTML = tbHtml;
-            
-            const label = document.getElementById('settlementYearLabel');
-            if(label) label.innerText = year;
-            
-            const chartCont = document.getElementById('settlementChartContainer');
-            if(chartCont) chartCont.innerHTML = chHtml;
-        },
-        
-        changeGlobalYear(direction) {
-            const ys = document.getElementById('yearFilter');
-            let currentYear = parseInt(ys.value);
-            if (isNaN(currentYear)) currentYear = new Date().getFullYear();
-            
-            let targetYear = currentYear + direction;
-            let exists = Array.from(ys.options).some(o => parseInt(o.value) === targetYear);
-            if (exists) {
-                ys.value = targetYear.toString();
-                this.syncDateInputWithFilter();
-                this.render();
-            }
         },
 
         syncDateInputWithFilter() {
@@ -1801,6 +1809,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
+                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -1919,7 +1928,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 다운로드 폴더에 저장되었습니다.\n(향후 복원 시 이 파일을 선택하십시오)`);
+                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.\n(향후 복원 시 이 파일을 선택하십시오)`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
