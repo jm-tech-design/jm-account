@@ -19,7 +19,7 @@
         :root {
             --bg-main: #f0f2f5; --bg-box: #ffffff; --bg-sub: #fafbfc; --bg-input: #f9f9fa;
             --text-main: #2d3436; --text-title: #1e272e; 
-            --text-muted: #636e72; /* [수정됨] 라이트 테마 가독성 향상을 위해 더 진한 회색으로 보정 */
+            --text-muted: #636e72; 
             --border-main: transparent; --border-input: #dfe6e9; --border-light: #f1f2f6;
             --color-income: #0984e3; --color-expense: #d63031; --color-warning: #e17055; --color-primary: #6c5ce7;
             --bg-table-head: #f5f6fa; --text-table-head: #2d3436;
@@ -34,7 +34,7 @@
             :root {
                 --bg-main: #121212; --bg-box: #1e1e1e; --bg-sub: #252525; --bg-input: #2c2c2c;
                 --text-main: #e0e0e0; --text-title: #ffffff; 
-                --text-muted: #888888; /* 다크모드에서는 밝은 회색 유지 */
+                --text-muted: #888888; 
                 --border-main: transparent; --border-input: #444444; --border-light: #333333;
                 --color-income: #74b9ff; --color-expense: #ff7675; --color-warning: #fab1a0; --color-primary: #a29bfe;
                 --bg-table-head: #2d3436; --text-table-head: #e0e0e0;
@@ -49,7 +49,6 @@
         body { font-family: "Pretendard Variable", sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 70px; padding-top: 65px; transition: background-color 0.3s, color 0.3s; }
         * { box-sizing: border-box; } 
         
-        /* 상단 네비게이션 (날짜 컨트롤러 통합) */
         .top-header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); z-index: 990; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); border-bottom: 1px solid var(--border-light); }
         @media (prefers-color-scheme: dark) { .top-header { background: rgba(30, 30, 30, 0.85); } }
         
@@ -63,12 +62,10 @@
 
         .btn-today { font-size: 11px; padding: 4px 10px; background: var(--border-light); color: var(--text-main); border-radius: 12px; font-weight: bold; border: none; cursor: pointer; }
 
-        /* [수정됨] 언두/리두 버튼: 콤팩트한 정사각형 비율로 중앙 레이아웃 침범 방지 */
         .history-btn { width: 32px; height: 32px; padding: 0; font-size: 18px; border-radius: 8px; font-weight: bold; background: var(--border-light); color: var(--text-main); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
         .history-btn:disabled { cursor: not-allowed; opacity: 0.3 !important; }
         .history-btn:active { background: var(--border-input); }
 
-        /* 하단 앱 탭 바 */
         .bottom-tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: var(--bg-box); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 999; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid var(--border-light); }
         .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; font-size: 10px; font-weight: bold; gap: 4px; height: 100%; transition: color 0.2s; }
         .tab-item.active { color: var(--text-title); }
@@ -80,7 +77,6 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 미니멀 박스 디자인 */
         .box { background: var(--bg-box); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: none; }
         .box-title { font-size: 15px; font-weight: 800; color: var(--text-title); margin: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; }
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 800; color: var(--text-title); margin: 0; }
@@ -94,7 +90,6 @@
         
         .bg-primary { background-color: var(--color-primary); } .bg-blue { background-color: var(--color-income); } .bg-red { background-color: var(--color-expense); } .bg-gray { background-color: var(--border-light); color: var(--text-main); }
         
-        /* 요약 카드 */
         .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
         .summary-card { background: var(--bg-box); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: center; }
         .summary-card.main { grid-column: span 4; background: var(--bg-main-card); color: var(--text-main-card); padding: 20px; }
@@ -104,7 +99,6 @@
         .summary-card.main .value { font-size: 24px; color: inherit; }
         .text-blue { color: var(--color-income); } .text-red { color: var(--color-expense); }
 
-        /* 테이블 미니멀화 */
         .table-container { width: 100%; overflow-x: auto; background: var(--bg-box); border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
         th, td { border-bottom: 1px solid var(--border-light); padding: 12px 10px; text-align: center; white-space: nowrap; }
@@ -114,7 +108,6 @@
         .badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: bold; background: var(--border-light); color: var(--text-muted); }
         .carried-row { background-color: var(--bg-carried); font-weight: bold; }
 
-        /* 차트용 */
         .settlement-chart-container { display: flex; height: 180px; align-items: flex-end; justify-content: space-around; gap: 4px; padding-top: 10px; border-bottom: 1px solid var(--border-main); margin-bottom: 15px; overflow-x: auto; }
         .settlement-bar-group { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 25px; }
         .settlement-bars { display: flex; width: 100%; justify-content: center; gap: 1px; height: 100%; align-items: flex-end; }
@@ -122,7 +115,6 @@
         .settlement-bar-inc { background-color: var(--color-income); } .settlement-bar-exp { background-color: var(--color-expense); }
         .settlement-month-label { font-size: 10px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
 
-        /* 달력 미니멀화 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
         .cal-header { text-align: center; font-size: 10px; font-weight: bold; color: var(--text-muted); padding-bottom: 8px; }
         .cal-day { background: var(--bg-sub); border-radius: 8px; min-height: 50px; padding: 4px; display: flex; flex-direction: column; align-items: flex-end; }
@@ -130,18 +122,15 @@
         .cal-date.sun { color: var(--color-expense); } .cal-date.sat { color: var(--color-income); } .cal-date.other-month { opacity: 0.3; }
         .cal-inc { color: var(--color-income); font-size: 9px; font-weight: 800; letter-spacing: -0.5px; } .cal-exp { color: var(--color-expense); font-size: 9px; font-weight: 800; letter-spacing: -0.5px; }
 
-        /* 프로그레스 바 & 리스트 */
         .progress-container { width: 100%; background-color: var(--border-light); border-radius: 8px; margin: 10px 0; overflow: hidden; height: 10px; }
         .progress-bar { height: 100%; background-color: var(--color-primary); width: 0%; transition: width 0.8s ease; border-radius: 8px; }
         .simple-list { list-style: none; padding: 0; margin: 0; }
         .simple-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
         .simple-list li:last-child { border-bottom: none; }
 
-        /* 모달 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--modal-overlay); align-items: center; justify-content: center; }
         .modal-content { background-color: var(--bg-box); padding: 25px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: var(--shadow-md); animation: fadeIn 0.2s; max-height: 80vh; overflow-y: auto; }
         
-        /* 모바일 보정 */
         @media screen and (max-width: 768px) {
             .mobile-row { flex-wrap: wrap !important; gap: 8px !important; margin-bottom: 8px !important; }
             .mobile-row > * { flex: 1 1 45%; min-width: 100px !important; width: auto; }
@@ -338,9 +327,10 @@
 
         <div class="box" id="debtSimulatorBox" style="display: none;">
             <div class="box-title">🎯 부채 상환 목표 관리</div>
-            <div class="flex-row mobile-row" style="align-items: center; background: var(--bg-sub); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                <span style="font-size:12px; font-weight:bold; color:var(--text-title); min-width: 80px;">목표 완납일</span>
-                <input type="month" id="debtTargetMonth" onchange="AppCtrl.updateDebtTarget(this.value)" style="flex: 1; border:none; background: transparent; font-weight: bold; text-align: right; color: var(--color-primary);">
+            
+            <div style="display:flex; justify-content:space-between; align-items: center; background: var(--bg-sub); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
+                <span style="font-size:13px; font-weight:800; color:var(--text-title);">목표 완납일</span>
+                <input type="month" id="debtTargetMonth" onchange="AppCtrl.updateDebtTarget(this.value)" style="border:none; background: transparent; font-weight: 800; font-size: 15px; color: var(--color-primary); outline: none; width: 140px; padding: 0;">
             </div>
             
             <div style="text-align: center; margin-bottom: 15px;">
@@ -381,9 +371,12 @@
                     <thead>
                         <tr>
                             <th>월</th>
-                            <th style="text-align:right;">순입금</th>
+                            <th style="text-align:right;">입금</th>
+                            <th style="text-align:right;">출금</th>
                             <th style="text-align:right;">총액</th>
-                            <th style="text-align:center;">수익률</th>
+                            <th style="text-align:right;">순손익</th>
+                            <th style="text-align:center;">월 수익</th>
+                            <th style="text-align:center;">누적 수익</th>
                             <th>관리</th>
                         </tr>
                     </thead>
@@ -435,7 +428,7 @@
         </div>
         
         <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-            통합 자산 가계부 System v3.2<br>
+            통합 자산 가계부 System v3.3<br>
             Designed by JM Mentor
         </div>
     </div>
@@ -1342,7 +1335,6 @@
             });
         },
 
-        // [수정됨] 연도 결산 리포트 타이틀의 공백 제거 및 글로벌 연동
         renderYearlySettlement() {
             let yearStr = document.getElementById('yearFilter').value;
             if (yearStr === 'all') yearStr = new Date().getFullYear().toString(); 
@@ -1375,7 +1367,7 @@
             const tbody = document.getElementById('settlementTbody');
             if(tbody) tbody.innerHTML = tbHtml;
             
-            // [수정됨] 타이틀 자바스크립트 주입으로 괄호 여백 100% 제거
+            // [수정됨] 타이틀의 괄호 띄어쓰기 강제 제거
             const boxTitle = document.getElementById('settlementBoxTitle');
             if(boxTitle) boxTitle.innerText = `📑 연도 결산 리포트(${yearStr}년)`;
             
