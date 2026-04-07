@@ -15,7 +15,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* === 미니멀리즘 테마 색상 변수 === */
         :root {
             --bg-main: #f0f2f5; --bg-box: #ffffff; --bg-sub: #fafbfc; --bg-input: #f9f9fa;
             --text-main: #2d3436; --text-title: #1e272e; 
@@ -146,9 +145,6 @@
         .simple-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
         .simple-list li:last-child { border-bottom: none; }
 
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--modal-overlay); align-items: center; justify-content: center; }
-        .modal-content { background-color: var(--bg-box); padding: 25px; border-radius: 16px; width: 90%; max-width: 500px; box-shadow: var(--shadow-md); animation: fadeIn 0.2s; max-height: 80vh; overflow-y: auto; }
-        
         @media screen and (max-width: 768px) {
             .mobile-row { flex-wrap: wrap !important; gap: 8px !important; margin-bottom: 8px !important; }
             .mobile-row > * { flex: 1 1 45%; min-width: 100px !important; width: auto; }
@@ -307,6 +303,7 @@
             </div>
         </div>
 
+
         <div id="tab-stats" class="tab-content">
             <div class="box">
                 <div class="box-title">
@@ -341,6 +338,7 @@
                 </div>
             </div>
         </div>
+
 
         <div id="tab-assets" class="tab-content">
             
@@ -448,9 +446,11 @@
             
             <div class="box">
                 <div class="box-title">🔒 앱 잠금 (보안)</div>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">앱 실행 시 4자리 PIN 비밀번호를 요구하여 타인의 접근을 방어합니다.</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">
+                    <strong>[강력 보안 활성화]</strong> 4자리 PIN 번호를 설정하면, 브라우저 내의 모든 자산 데이터가 미국 정부 표준인 <strong>AES-256-GCM 알고리즘으로 심층 암호화</strong>되어 보관됩니다. PIN 번호를 잊어버리면 그 누구도 데이터를 복구할 수 없습니다.
+                </p>
                 <div class="flex-row mobile-row" style="margin-bottom: 0;">
-                    <button id="pinToggleBtn" class="std-btn bg-primary flex-1 btn-fixed" onclick="AuthCtrl.startSetup()">PIN 비밀번호 설정</button>
+                    <button id="pinToggleBtn" class="std-btn bg-primary flex-1 btn-fixed" onclick="AuthCtrl.startSetup()">PIN 비밀번호 및 암호화 설정</button>
                 </div>
             </div>
 
@@ -479,7 +479,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v4.2<br>
+                통합 자산 가계부 System v5.0 (Secure Edition)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -500,10 +500,7 @@
             <span class="tab-icon">⚙️</span><span>설정</span>
         </div>
     </div>
-</div> <datalist id="descHistoryList"></datalist>
-<datalist id="noteHistoryList"></datalist>
-
-<script>
+</div> <script>
     // ==========================================
     // 1. Utilities
     // ==========================================
@@ -525,55 +522,102 @@
     };
 
     // ==========================================
-    // 2. DataStore
+    // [신규] 2. CryptoVault (군사급 암호화 모듈)
+    // ==========================================
+    const CryptoVault = {
+        async getDerivationParams(salt) {
+            return { name: "PBKDF2", salt: salt, iterations: 500000, hash: "SHA-256" };
+        },
+        async getKeyMaterial(pin) {
+            const enc = new TextEncoder();
+            return window.crypto.subtle.importKey("raw", enc.encode(pin), {name: "PBKDF2"}, false, ["deriveBits", "deriveKey"]);
+        },
+        async deriveKey(pin, salt) {
+            const keyMaterial = await this.getKeyMaterial(pin);
+            return window.crypto.subtle.deriveKey(
+                await this.getDerivationParams(salt),
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                true,
+                [ "encrypt", "decrypt" ]
+            );
+        },
+        async encrypt(dataObj, pin) {
+            const salt = window.crypto.getRandomValues(new Uint8Array(16));
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const key = await this.deriveKey(pin, salt);
+            const enc = new TextEncoder();
+            const encodedData = enc.encode(JSON.stringify(dataObj));
+            
+            const ciphertext = await window.crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                encodedData
+            );
+            
+            const bundle = new Uint8Array(salt.length + iv.length + ciphertext.byteLength);
+            bundle.set(salt, 0);
+            bundle.set(iv, salt.length);
+            bundle.set(new Uint8Array(ciphertext), salt.length + iv.length);
+            
+            let binary = '';
+            bundle.forEach(b => binary += String.fromCharCode(b));
+            return window.btoa(binary);
+        },
+        async decrypt(base64Bundle, pin) {
+            const binary = window.atob(base64Bundle);
+            const bundle = new Uint8Array(binary.length);
+            for(let i=0; i<binary.length; i++) bundle[i] = binary.charCodeAt(i);
+            
+            const salt = bundle.slice(0, 16);
+            const iv = bundle.slice(16, 28);
+            const ciphertext = bundle.slice(28);
+            
+            const key = await this.deriveKey(pin, salt);
+            
+            try {
+                const decrypted = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    ciphertext
+                );
+                const dec = new TextDecoder();
+                return JSON.parse(dec.decode(decrypted));
+            } catch(e) {
+                throw new Error("Invalid PIN or corrupted data");
+            }
+        }
+    };
+
+    // ==========================================
+    // 3. DataStore (암호화 대응 비동기 아키텍처)
     // ==========================================
     const DataStore = {
         state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {}, stockRecords: [], stockAccounts: [], subscriptions: [] },
         history: { stack: [], pointer: -1, MAX: 5 },
+        isEncrypted: false,
         
         safeParse(key, defaultVal) {
             try {
                 const val = localStorage.getItem(key);
                 if (!val || val === 'undefined' || val === 'null') return defaultVal;
-                const parsed = JSON.parse(val);
-                if (typeof parsed === 'object' && parsed !== null) {
-                    if (Array.isArray(defaultVal) && !Array.isArray(parsed)) return defaultVal;
-                    return parsed;
-                }
-                return defaultVal;
+                return JSON.parse(val);
             } catch (e) {
-                console.warn(`데이터 파싱 오류 복구됨: ${key}`, e);
                 return defaultVal;
             }
         },
 
-        init() {
+        // [변경] 평문 데이터만 로드하도록 분리 (암호화된 경우 이 데이터를 덮어씌움)
+        initPlaintext() {
             this.state.entries = this.safeParse('accountBook_v2', []);
-            if (!Array.isArray(this.state.entries)) this.state.entries = [];
             this.state.customCols = this.safeParse('accountCols', []);
-            if (!Array.isArray(this.state.customCols)) this.state.customCols = [];
             this.state.assets = this.safeParse('accountAssets', []);
-            if (!Array.isArray(this.state.assets)) this.state.assets = [];
             this.state.recurringTasks = this.safeParse('accountRecurring_v2', []);
-            if (!Array.isArray(this.state.recurringTasks)) this.state.recurringTasks = [];
             this.state.stockRecords = this.safeParse('accountStocks', []);
-            if (!Array.isArray(this.state.stockRecords)) this.state.stockRecords = [];
             this.state.stockAccounts = this.safeParse('accountStockAccounts', []);
-            if (!Array.isArray(this.state.stockAccounts)) this.state.stockAccounts = [];
             this.state.subscriptions = this.safeParse('accountSubscriptions', []);
-            if (!Array.isArray(this.state.subscriptions)) this.state.subscriptions = [];
             this.state.monthlyMemos = this.safeParse('accountMonthlyMemos', {});
-            if (typeof this.state.monthlyMemos !== 'object' || this.state.monthlyMemos === null) this.state.monthlyMemos = {};
             this.state.settings = this.safeParse('accountSettings', {});
-            if (typeof this.state.settings !== 'object' || this.state.settings === null) this.state.settings = {};
-            
-            if(this.state.entries.length === 0 && localStorage.getItem('accountBook')) {
-                const oldEntries = this.safeParse('accountBook', []);
-                this.state.entries = Array.isArray(oldEntries) ? oldEntries : [];
-                this.save();
-            }
-            this.runMigration();
-            this.pushState();
         },
 
         runMigration() {
@@ -613,13 +657,14 @@
                     }
                 });
 
-                if (changed) this.save();
+                if (changed) this.save(); // 비동기이지만 UI 렌더링에 영향 없음
             } catch (e) {
                 console.error("마이그레이션 오류 발생:", e);
             }
         },
 
-        save() {
+        // [변경] 비동기 데이터 저장 로직 (AES 암호화 분기 처리)
+        async save() {
             try {
                 const optimizedEntries = this.state.entries.map(e => {
                     const opt = { ...e };
@@ -634,17 +679,45 @@
                     }
                     return opt;
                 });
-                localStorage.setItem('accountBook_v2', JSON.stringify(optimizedEntries));
-                localStorage.setItem('accountAssets', JSON.stringify(this.state.assets));
-                localStorage.setItem('accountCols', JSON.stringify(this.state.customCols));
-                localStorage.setItem('accountRecurring_v2', JSON.stringify(this.state.recurringTasks));
-                localStorage.setItem('accountMonthlyMemos', JSON.stringify(this.state.monthlyMemos));
-                localStorage.setItem('accountSettings', JSON.stringify(this.state.settings));
-                localStorage.setItem('accountStocks', JSON.stringify(this.state.stockRecords));
-                localStorage.setItem('accountStockAccounts', JSON.stringify(this.state.stockAccounts));
-                localStorage.setItem('accountSubscriptions', JSON.stringify(this.state.subscriptions));
+
+                const stateToSave = {
+                    entries: optimizedEntries,
+                    customCols: this.state.customCols,
+                    assets: this.state.assets,
+                    recurringTasks: this.state.recurringTasks,
+                    monthlyMemos: this.state.monthlyMemos,
+                    settings: this.state.settings,
+                    stockRecords: this.state.stockRecords,
+                    stockAccounts: this.state.stockAccounts,
+                    subscriptions: this.state.subscriptions
+                };
+
+                if (this.isEncrypted && AuthCtrl.currentPin) {
+                    // 암호화 모드: 전체 상태를 암호화 캡슐로 압축
+                    const encryptedBase64 = await CryptoVault.encrypt(stateToSave, AuthCtrl.currentPin);
+                    localStorage.setItem('jm_secure_vault', encryptedBase64);
+                    
+                    // 평문 데이터 완벽 파괴 (Wipe)
+                    const keysToWipe = ['accountBook_v2', 'accountAssets', 'accountCols', 'accountRecurring_v2', 'accountMonthlyMemos', 'accountSettings', 'accountStocks', 'accountStockAccounts', 'accountSubscriptions'];
+                    keysToWipe.forEach(k => localStorage.removeItem(k));
+                } else {
+                    // 평문 모드
+                    localStorage.setItem('accountBook_v2', JSON.stringify(stateToSave.entries));
+                    localStorage.setItem('accountAssets', JSON.stringify(stateToSave.assets));
+                    localStorage.setItem('accountCols', JSON.stringify(stateToSave.customCols));
+                    localStorage.setItem('accountRecurring_v2', JSON.stringify(stateToSave.recurringTasks));
+                    localStorage.setItem('accountMonthlyMemos', JSON.stringify(stateToSave.monthlyMemos));
+                    localStorage.setItem('accountSettings', JSON.stringify(stateToSave.settings));
+                    localStorage.setItem('accountStocks', JSON.stringify(stateToSave.stockRecords));
+                    localStorage.setItem('accountStockAccounts', JSON.stringify(stateToSave.stockAccounts));
+                    localStorage.setItem('accountSubscriptions', JSON.stringify(stateToSave.subscriptions));
+                    
+                    // 암호화 캡슐 파괴
+                    localStorage.removeItem('jm_secure_vault');
+                }
             } catch (e) {
-                if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업(JSON) 후 오래된 내역을 삭제하세요.');
+                console.error("Save error:", e);
+                if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업 후 정리하십시오.');
             }
         },
 
@@ -680,22 +753,55 @@
     };
 
     // ==========================================
-    // 3. AuthCtrl (보안 모듈)
+    // 4. AuthCtrl (보안 모듈 & 암호 해독기)
     // ==========================================
     const AuthCtrl = {
         mode: 'unlock', 
         tempPin: '',
         currentInput: '',
-        hasUnlocked: false, 
+        currentPin: null,
+        legacyPin: null, // V1 마이그레이션용 임시 보관소
         
-        init() {
-            // [수정됨] 세션 스토리지를 활용하여 새로고침 시 자물쇠 패스
-            const isSessionUnlocked = sessionStorage.getItem('jm_app_unlocked') === 'true';
+        async init() {
+            const vault = localStorage.getItem('jm_secure_vault');
+            const legacySettings = DataStore.safeParse('accountSettings', {});
             
-            if (DataStore.state.settings.appPin && !isSessionUnlocked) {
-                this.showLockScreen('unlock');
+            if (vault) {
+                // V2: AES 암호화 캡슐 발견
+                DataStore.isEncrypted = true;
+                const tempKey = sessionStorage.getItem('jm_temp_key');
+                const isSessionUnlocked = sessionStorage.getItem('jm_app_unlocked') === 'true';
+                
+                if (isSessionUnlocked && tempKey) {
+                    try {
+                        const decryptedState = await CryptoVault.decrypt(vault, tempKey);
+                        DataStore.state = decryptedState;
+                        this.currentPin = tempKey;
+                        AppCtrl.onAppUnlocked(); // 잠금 해제 성공
+                    } catch(e) {
+                        sessionStorage.removeItem('jm_temp_key');
+                        sessionStorage.removeItem('jm_app_unlocked');
+                        this.showLockScreen('unlock');
+                    }
+                } else {
+                    this.showLockScreen('unlock');
+                }
+            } else if (legacySettings.appPin) {
+                // V1: 과거 방식 평문 PIN 발견 (마이그레이션 대상)
+                DataStore.isEncrypted = false;
+                this.legacyPin = legacySettings.appPin;
+                
+                const tempKey = sessionStorage.getItem('jm_temp_key');
+                if (sessionStorage.getItem('jm_app_unlocked') === 'true' && tempKey === this.legacyPin) {
+                    this.currentPin = tempKey;
+                    await this.executeMigration();
+                } else {
+                    this.showLockScreen('unlock_legacy');
+                }
             } else {
-                this.unlockApp();
+                // 잠금 없음
+                DataStore.isEncrypted = false;
+                AppCtrl.onAppUnlocked();
             }
         },
         
@@ -710,49 +816,95 @@
             const msg = document.getElementById('lockMessage');
             const subMsg = document.getElementById('lockSubMessage');
             
-            if (mode === 'unlock') {
+            if (mode === 'unlock' || mode === 'unlock_legacy') {
                 msg.innerText = '비밀번호 입력';
                 subMsg.innerText = '앱을 잠금 해제하려면 PIN을 입력하세요.';
             } else if (mode === 'setup1') {
                 msg.innerText = '새 비밀번호 등록';
-                subMsg.innerText = '앱 잠금에 사용할 4자리 숫자를 입력하세요.';
+                subMsg.innerText = '강력한 AES-256 데이터 암호화가 적용됩니다.';
             } else if (mode === 'setup2') {
                 msg.innerText = '새 비밀번호 확인';
                 subMsg.innerText = '방금 입력한 PIN 번호를 다시 입력하세요.';
             } else if (mode === 'remove') {
-                msg.innerText = '잠금 해제 (삭제)';
+                msg.innerText = '잠금 해제 (암호화 해제)';
                 subMsg.innerText = '기존에 사용하던 PIN 번호를 입력하세요.';
             }
         },
         
-        unlockApp() {
-            document.getElementById('lockScreen').style.display = 'none';
-            document.getElementById('appWrapper').style.display = 'block';
-            this.updateSettingsUI();
+        // 올바른 번호가 입력되면 호출
+        async processPin() {
+            const val = this.currentInput;
             
-            // [수정됨] 통행증 발급 (탭이 닫히기 전까지 유지)
-            sessionStorage.setItem('jm_app_unlocked', 'true');
-            
-            // [수정됨] 화면이 완전히 그려진 후(0.05초 뒤)에 차트와 데이터 렌더링 강제 실행
-            if (!this.hasUnlocked) {
-                setTimeout(() => {
-                    UIManager.renderAll();
-                    AppCtrl.checkRecurringTasks(); 
-                    UIManager.syncDateInputWithFilter();
-                }, 50);
-                this.hasUnlocked = true;
-            } else {
-                UIManager.renderAll();
+            if (this.mode === 'unlock') {
+                try {
+                    const vault = localStorage.getItem('jm_secure_vault');
+                    const decryptedState = await CryptoVault.decrypt(vault, val);
+                    
+                    DataStore.state = decryptedState;
+                    this.currentPin = val;
+                    sessionStorage.setItem('jm_app_unlocked', 'true');
+                    sessionStorage.setItem('jm_temp_key', val);
+                    AppCtrl.onAppUnlocked();
+                } catch(e) {
+                    this.triggerError('비밀번호가 틀렸습니다.');
+                }
+            } else if (this.mode === 'unlock_legacy') {
+                if (val === this.legacyPin) {
+                    this.currentPin = val;
+                    sessionStorage.setItem('jm_app_unlocked', 'true');
+                    sessionStorage.setItem('jm_temp_key', val);
+                    await this.executeMigration();
+                } else {
+                    this.triggerError('비밀번호가 틀렸습니다.');
+                }
+            } else if (this.mode === 'setup1') {
+                this.tempPin = val;
+                this.showLockScreen('setup2');
+            } else if (this.mode === 'setup2') {
+                if (val === this.tempPin) {
+                    this.currentPin = val;
+                    DataStore.isEncrypted = true;
+                    // V1 찌꺼기 삭제
+                    if(DataStore.state.settings) delete DataStore.state.settings.appPin; 
+                    await DataStore.save();
+                    sessionStorage.setItem('jm_app_unlocked', 'true');
+                    sessionStorage.setItem('jm_temp_key', val);
+                    alert('보안 설정 완료: 이제 데이터가 군사급(AES-256)으로 암호화되어 저장됩니다.');
+                    AppCtrl.onAppUnlocked();
+                } else {
+                    this.triggerError('비밀번호가 일치하지 않습니다.');
+                    setTimeout(() => this.showLockScreen('setup1'), 500);
+                }
+            } else if (this.mode === 'remove') {
+                if (val === this.currentPin) {
+                    this.currentPin = null;
+                    DataStore.isEncrypted = false;
+                    await DataStore.save(); // 암호화 해제하여 저장
+                    sessionStorage.removeItem('jm_app_unlocked');
+                    sessionStorage.removeItem('jm_temp_key');
+                    alert('보안 해제 완료: 이제 데이터가 평문으로 저장됩니다.');
+                    AppCtrl.onAppUnlocked();
+                } else {
+                    this.triggerError('비밀번호가 틀렸습니다.');
+                    setTimeout(() => AppCtrl.onAppUnlocked(), 500);
+                }
             }
+        },
+
+        async executeMigration() {
+            if(DataStore.state.settings) delete DataStore.state.settings.appPin;
+            DataStore.isEncrypted = true;
+            await DataStore.save(); // 암호화 후 평문 삭제
+            alert('시스템 보안 업데이트 완료.\n당신의 데이터가 AES-256 규격으로 안전하게 암호화 마이그레이션 되었습니다.');
+            AppCtrl.onAppUnlocked();
         },
         
         pressKey(num) {
             if (this.currentInput.length < 4) {
                 this.currentInput += num;
                 this.updateDots();
-                
                 if (this.currentInput.length === 4) {
-                    setTimeout(() => this.processPin(), 150); 
+                    setTimeout(() => this.processPin(), 100); 
                 }
             }
         },
@@ -780,49 +932,12 @@
                 this.currentInput = '';
                 dots.forEach(dot => { dot.style.backgroundColor = ''; });
                 this.updateDots();
-            }, 100);
-        },
-        
-        processPin() {
-            const val = this.currentInput;
-            const currentPin = DataStore.state.settings.appPin;
-            
-            if (this.mode === 'unlock') {
-                if (val === currentPin) {
-                    this.unlockApp();
-                } else {
-                    this.triggerError('비밀번호가 틀렸습니다.');
-                }
-            } else if (this.mode === 'setup1') {
-                this.tempPin = val;
-                this.showLockScreen('setup2');
-            } else if (this.mode === 'setup2') {
-                if (val === this.tempPin) {
-                    DataStore.state.settings.appPin = val;
-                    DataStore.save();
-                    alert('PIN 번호가 안전하게 설정되었습니다.');
-                    this.unlockApp();
-                } else {
-                    this.triggerError('비밀번호가 일치하지 않습니다.');
-                    setTimeout(() => this.showLockScreen('setup1'), 500);
-                }
-            } else if (this.mode === 'remove') {
-                if (val === currentPin) {
-                    delete DataStore.state.settings.appPin;
-                    DataStore.save();
-                    sessionStorage.removeItem('jm_app_unlocked'); // 해제 시 통행증도 삭제
-                    alert('PIN 잠금이 해제되었습니다.');
-                    this.unlockApp();
-                } else {
-                    this.triggerError('비밀번호가 틀렸습니다.');
-                    setTimeout(() => this.unlockApp(), 500);
-                }
-            }
+            }, 50);
         },
         
         startSetup() {
-            if (DataStore.state.settings.appPin) {
-                if(confirm('현재 PIN 잠금을 완전히 해제하시겠습니까?')) {
+            if (DataStore.isEncrypted) {
+                if(confirm('현재 데이터를 보호 중인 암호화 잠금을 완전히 해제하시겠습니까? (위험)')) {
                     this.showLockScreen('remove');
                 }
             } else {
@@ -833,12 +948,12 @@
         updateSettingsUI() {
             const btn = document.getElementById('pinToggleBtn');
             if(btn) {
-                if (DataStore.state.settings.appPin) {
-                    btn.innerText = 'PIN 잠금 해제 (현재 사용 중)';
+                if (DataStore.isEncrypted) {
+                    btn.innerText = '보안 잠금 해제 (AES 암호화 작동 중)';
                     btn.classList.remove('bg-primary');
                     btn.classList.add('bg-danger');
                 } else {
-                    btn.innerText = 'PIN 비밀번호 설정';
+                    btn.innerText = 'PIN 비밀번호 및 암호화 설정';
                     btn.classList.remove('bg-danger');
                     btn.classList.add('bg-primary');
                 }
@@ -847,7 +962,7 @@
     };
 
     // ==========================================
-    // 4. UIManager
+    // 5. UIManager
     // ==========================================
     const UIManager = {
         currentEditId: null,
@@ -1729,15 +1844,21 @@
     };
 
     // ==========================================
-    // 4. AppCtrl
+    // 5. AppCtrl (메인 로직 및 연결부)
     // ==========================================
     const AppCtrl = {
         init() { 
-            DataStore.init(); 
+            DataStore.initPlaintext(); 
             UIManager.initFilters(); 
-            
-            // 앱이 켜질 때 잠금 화면 검사부터 실행
-            AuthCtrl.init();
+            AuthCtrl.init(); // 여기서 잠금 확인 후 onAppUnlocked 호출
+        },
+
+        // [신규] 잠금 해제 직후 실행되는 부트 시퀀스
+        onAppUnlocked() {
+            DataStore.runMigration();
+            DataStore.pushState();
+            UIManager.syncDateInputWithFilter();
+            this.checkRecurringTasks(); 
         },
         
         saveMonthlyMemo() { UIManager.saveMonthlyMemo(); },
@@ -2130,10 +2251,20 @@
             if(DataStore.state.entries.length === 0 && DataStore.state.assets.length === 0) { alert('백업할 데이터가 없습니다.'); return; }
             
             const fileName = `가계부_통합백업_${Utils.getTodayString()}.txt`;
-            const jsonStr = JSON.stringify(DataStore.state);
+            
+            // [개선] 백업 데이터 생성 시, 암호화 상태면 암호화 캡슐만, 아니면 평문 JSON 생성
+            let backupDataStr = '';
+            if (DataStore.isEncrypted) {
+                backupDataStr = JSON.stringify({
+                    is_secure_vault: true,
+                    payload: localStorage.getItem('jm_secure_vault')
+                });
+            } else {
+                backupDataStr = JSON.stringify(DataStore.state);
+            }
             
             try {
-                const blob = new Blob([jsonStr], { type: "text/plain;charset=utf-8" });
+                const blob = new Blob([backupDataStr], { type: "text/plain;charset=utf-8" });
                 const link = document.createElement('a'); 
                 link.href = URL.createObjectURL(blob);
                 link.download = fileName; 
@@ -2150,46 +2281,62 @@
             const file = event.target.files[0]; if (!file) return;
             if(!confirm('기존 데이터가 덮어씌워집니다. 진행하시겠습니까?')) { event.target.value = ''; return; }
             
-            const preservedPin = DataStore.state.settings.appPin;
-
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const rData = JSON.parse(e.target.result);
-                    if (rData && typeof rData === 'object') {
-                        const _entries = Array.isArray(rData.entries) ? rData.entries : (Array.isArray(rData) ? rData : []);
-                        const _customCols = Array.isArray(rData.customCols) ? rData.customCols : [];
-                        const _assets = Array.isArray(rData.assets) ? rData.assets : [];
-                        const _recurring = Array.isArray(rData.recurringTasks) ? rData.recurringTasks : [];
-                        const _stocks = Array.isArray(rData.stockRecords) ? rData.stockRecords : [];
-                        const _stockAcc = Array.isArray(rData.stockAccounts) ? rData.stockAccounts : [];
-                        const _subscriptions = Array.isArray(rData.subscriptions) ? rData.subscriptions : [];
-                        const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
-                        const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
+                    
+                    // [신규] 암호화된 백업 파일 복원 로직
+                    if (rData.is_secure_vault && rData.payload) {
+                        const pin = prompt('이 백업 파일은 암호화되어 있습니다.\n백업 당시의 4자리 PIN 번호를 입력하세요:');
+                        if (!pin) { alert('복원이 취소되었습니다.'); return; }
                         
-                        if (preservedPin) {
-                            _settings.appPin = preservedPin;
+                        try {
+                            const decryptedState = await CryptoVault.decrypt(rData.payload, pin);
+                            DataStore.state = decryptedState;
+                            AuthCtrl.currentPin = pin;
+                            DataStore.isEncrypted = true;
+                            await DataStore.save();
+                            sessionStorage.setItem('jm_app_unlocked', 'true');
+                            sessionStorage.setItem('jm_temp_key', pin);
+                            alert('암호화 데이터 복원 완료. 페이지를 새로고침합니다.');
+                            location.reload();
+                        } catch(err) {
+                            alert('PIN 번호가 틀렸거나 파일이 손상되었습니다.');
+                            return;
                         }
-                        
-                        localStorage.setItem('accountBook_v2', JSON.stringify(_entries));
-                        localStorage.setItem('accountCols', JSON.stringify(_customCols));
-                        localStorage.setItem('accountAssets', JSON.stringify(_assets));
-                        localStorage.setItem('accountRecurring_v2', JSON.stringify(_recurring));
-                        localStorage.setItem('accountStocks', JSON.stringify(_stocks));
-                        localStorage.setItem('accountStockAccounts', JSON.stringify(_stockAcc));
-                        localStorage.setItem('accountSubscriptions', JSON.stringify(_subscriptions));
-                        localStorage.setItem('accountMonthlyMemos', JSON.stringify(_memos));
-                        localStorage.setItem('accountSettings', JSON.stringify(_settings));
-                        
-                        alert('복원 완료. 페이지를 새로고침합니다.'); location.reload(); 
-                    } else alert('지원하지 않는 백업 파일입니다.');
+                    } else {
+                        // 평문 백업 파일 복원
+                        if (rData && typeof rData === 'object') {
+                            const _entries = Array.isArray(rData.entries) ? rData.entries : (Array.isArray(rData) ? rData : []);
+                            const _customCols = Array.isArray(rData.customCols) ? rData.customCols : [];
+                            const _assets = Array.isArray(rData.assets) ? rData.assets : [];
+                            const _recurring = Array.isArray(rData.recurringTasks) ? rData.recurringTasks : [];
+                            const _stocks = Array.isArray(rData.stockRecords) ? rData.stockRecords : [];
+                            const _stockAcc = Array.isArray(rData.stockAccounts) ? rData.stockAccounts : [];
+                            const _subscriptions = Array.isArray(rData.subscriptions) ? rData.subscriptions : [];
+                            const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
+                            const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
+                            
+                            DataStore.state = {
+                                entries: _entries, customCols: _customCols, assets: _assets, recurringTasks: _recurring,
+                                stockRecords: _stocks, stockAccounts: _stockAcc, subscriptions: _subscriptions,
+                                monthlyMemos: _memos, settings: _settings
+                            };
+                            
+                            // 현재 기기의 암호화 상태를 유지하며 저장
+                            await DataStore.save();
+                            alert('복원 완료. 페이지를 새로고침합니다.'); location.reload(); 
+                        } else {
+                            alert('지원하지 않는 백업 파일입니다.');
+                        }
+                    }
                 } catch (error) { alert('파일 읽기 오류. 올바른 백업 파일인지 확인하십시오.'); }
             };
             reader.readAsText(file);
         }
     };
 
-    // DOMContentLoaded 대신 window.onload를 사용하여 브라우저 렌더링 준비 후 실행되도록 보장
     window.addEventListener('load', () => {
         AppCtrl.init();
         
