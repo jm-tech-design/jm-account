@@ -6,7 +6,7 @@
     <title>통합 자산 가계부 by JM</title>
     
     <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#2c3e50">
+    <meta name="theme-color" content="#f0f2f5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="./icon-192x192.png">
@@ -15,405 +15,428 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* === 미니멀리즘 테마 색상 변수 === */
         :root {
-            --bg-main: #f4f4f9; --bg-box: #ffffff; --bg-sub: #fafafa; --bg-input: #ffffff;
-            --text-main: #333333; --text-title: #2c3e50; --text-muted: #7f8c8d;
-            --border-main: #dddddd; --border-input: #cccccc; --border-light: #eeeeee;
-            --color-income: #2980b9; --color-expense: #c0392b; --color-warning: #d35400;
-            --bg-table-head: #34495e; --text-table-head: #ffffff;
-            --bg-highlight: #e8f4f8; --border-highlight: #bce8f1;
-            --bg-carried: #fcf3cf; --bg-excluded: #f9f9f9; --bg-chart: #eeeeee;
-            --modal-overlay: rgba(0,0,0,0.6);
+            --bg-main: #f0f2f5; --bg-box: #ffffff; --bg-sub: #fafbfc; --bg-input: #f9f9fa;
+            --text-main: #2d3436; --text-title: #1e272e; --text-muted: #b2bec3;
+            --border-main: transparent; --border-input: #dfe6e9; --border-light: #f1f2f6;
+            --color-income: #0984e3; --color-expense: #d63031; --color-warning: #e17055; --color-primary: #6c5ce7;
+            --bg-table-head: #f5f6fa; --text-table-head: #2d3436;
+            --bg-highlight: #e3f2fd; --border-highlight: #74b9ff;
+            --bg-carried: #fff9c4; --bg-excluded: #f5f6fa; --bg-chart: #dfe6e9;
+            --modal-overlay: rgba(0,0,0,0.5);
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.04); --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
         }
 
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-main: #121212; --bg-box: #1e1e1e; --bg-sub: #252525; --bg-input: #2c2c2c;
-                --text-main: #e0e0e0; --text-title: #81c784; --text-muted: #95a5a6;
-                --border-main: #333333; --border-input: #555555; --border-light: #2a2a2a;
-                --color-income: #5dade2; --color-expense: #e74c3c; --color-warning: #f39c12;
-                --bg-table-head: #2c3e50; --text-table-head: #e0e0e0;
-                --bg-highlight: #1a252f; --border-highlight: #2c3e50;
-                --bg-carried: #3d3515; --bg-excluded: #222222; --bg-chart: #333333;
+                --text-main: #e0e0e0; --text-title: #ffffff; --text-muted: #888888;
+                --border-main: transparent; --border-input: #444444; --border-light: #333333;
+                --color-income: #74b9ff; --color-expense: #ff7675; --color-warning: #fab1a0; --color-primary: #a29bfe;
+                --bg-table-head: #2d3436; --text-table-head: #e0e0e0;
+                --bg-highlight: #2c3e50; --border-highlight: #34495e;
+                --bg-carried: #3e3b22; --bg-excluded: #222222; --bg-chart: #444444;
                 --modal-overlay: rgba(0,0,0,0.8);
+                --shadow-sm: 0 2px 8px rgba(0,0,0,0.4); --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
             }
         }
 
-        body { font-family: "Pretendard Variable", sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; padding-bottom: 90px; transition: background-color 0.3s, color 0.3s; }
-        .container { max-width: 1000px; margin: auto; background: var(--bg-box); padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); position: relative; }
-        h1, h2, h3 { text-align: center; color: var(--text-title); }
-        h1 { margin-top: 30px; } * { box-sizing: border-box; } 
+        body { font-family: "Pretendard Variable", sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 70px; padding-top: 65px; transition: background-color 0.3s, color 0.3s; }
+        * { box-sizing: border-box; } 
         
-        .top-nav-bar { position: fixed; top: 20px; left: 20px; right: 20px; z-index: 990; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
-        .history-btn { height: 32px; font-size: 12px; padding: 0 16px; border-radius: 16px; font-weight: bold; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; pointer-events: auto; backdrop-filter: blur(6px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .history-btn:disabled { cursor: not-allowed; opacity: 0.4 !important; background-color: var(--text-muted) !important; box-shadow: none; }
-        #undoBtn { background-color: rgba(230, 126, 34, 0.85); } #redoBtn { background-color: rgba(41, 128, 185, 0.85); }
+        /* 상단 네비게이션 (날짜 컨트롤러 통합) */
+        .top-header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); z-index: 990; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); border-bottom: 1px solid var(--border-light); }
+        @media (prefers-color-scheme: dark) { .top-header { background: rgba(30, 30, 30, 0.85); } }
         
-        .bottom-nav { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; z-index: 990; pointer-events: none; }
-        .bottom-nav .std-btn, .bottom-nav select { pointer-events: auto; height: 40px; padding: 0 16px; border-radius: 20px; font-size: 14px; font-weight: bold; background: rgba(255, 255, 255, 0.85); color: var(--text-title); border: 1px solid #b0b0b0; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin: 0; }
-        .bottom-nav select { appearance: none; text-align: center; cursor: pointer; }
-        .btn-current { margin-left: 40px; }
-        
-        @media (prefers-color-scheme: dark) { .bottom-nav .std-btn, .bottom-nav select { background: rgba(44, 44, 44, 0.85); color: #e0e0e0; border: 1px solid #777777; } }
+        .date-controller { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: var(--text-title); }
+        .date-btn { background: transparent; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 5px 15px; }
+        .date-btn:active { color: var(--color-primary); }
+        .date-selects { display: flex; gap: 5px; }
+        .date-selects select { appearance: none; background: transparent; border: none; font-size: 16px; font-weight: 800; color: var(--text-title); cursor: pointer; text-align: center; padding: 0; margin: 0; outline: none; font-family: inherit; }
+        .btn-today { font-size: 11px; padding: 4px 10px; background: var(--border-light); color: var(--text-main); border-radius: 12px; font-weight: bold; border: none; cursor: pointer; }
 
-        .box { border: 1px solid var(--border-main); padding: 15px; border-radius: 8px; background: var(--bg-sub); margin-bottom: 20px; }
-        .collapsible-header { cursor: pointer; margin: 0; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: var(--text-title); padding: 4px 0; }
-        input, select, .std-btn, textarea { height: 36px; padding: 0 10px; font-size: 14px; border: 1px solid var(--border-input); border-radius: 4px; font-family: inherit; background-color: var(--bg-input); color: var(--text-main); }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-income); box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.2); }
-        .std-btn { background-color: #2c3e50; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .util-btn { height: 26px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 3px; cursor: pointer; }
-        .btn-edit { background-color: #f39c12; } .btn-del { background-color: #e74c3c; } .btn-gray { background-color: #95a5a6; }
-        .flex-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; } .flex-1 { flex: 1; min-width: 120px; }
-        .bg-green { background-color: #27ae60; } .bg-purple { background-color: #8e44ad; } .bg-orange { background-color: #d35400; } .bg-blue { background-color: var(--color-income); }
-        .col-list { list-style: none; padding: 0; margin: 10px 0; max-height: 150px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 4px; }
-        .col-list li { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-light); background: var(--bg-box);}
-        .input-area { background: var(--bg-highlight); padding: 15px; border-radius: 8px; border: 1px solid var(--border-highlight); }
-        .checkbox-label { font-size: 13px; display: flex; align-items: center; font-weight: bold; color: var(--color-expense); cursor: pointer; }
+        /* 하단 앱 탭 바 */
+        .bottom-tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: var(--bg-box); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 999; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid var(--border-light); }
+        .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; font-size: 10px; font-weight: bold; gap: 4px; height: 100%; transition: color 0.2s; }
+        .tab-item.active { color: var(--text-title); }
+        .tab-icon { font-size: 20px; filter: grayscale(100%) opacity(0.5); transition: filter 0.2s; }
+        .tab-item.active .tab-icon { filter: none; }
+
+        .container { max-width: 800px; margin: auto; padding: 15px; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 미니멀 박스 디자인 */
+        .box { background: var(--bg-box); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: none; }
+        .box-title { font-size: 15px; font-weight: 800; color: var(--text-title); margin: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; }
+        .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 800; color: var(--text-title); margin: 0; }
         
-        .summary-box { display: flex; justify-content: space-around; background: var(--bg-sub); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; border: 1px solid var(--border-main); }
-        .text-blue { color: var(--color-income); } .text-red { color: var(--color-expense); } .text-gray { color: var(--text-muted); }
-        .num-wrap { display: inline-block; text-align: right; width: 85px; font-variant-numeric: tabular-nums; }
+        input, select, .std-btn, textarea { height: 42px; padding: 0 12px; font-size: 14px; border: 1px solid var(--border-input); border-radius: 8px; font-family: inherit; background-color: var(--bg-input); color: var(--text-main); transition: border-color 0.2s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary); background-color: var(--bg-box); }
+        .std-btn { background-color: var(--text-title); color: white; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .util-btn { height: 28px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } .btn-gray { background-color: #dfe6e9; color: #2d3436; }
+        .flex-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; } .flex-1 { flex: 1; min-width: 120px; }
         
-        .table-container { width: 100%; overflow-x: auto; border: 1px solid var(--border-main); border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--bg-box); }
-        th, td { border-bottom: 1px solid var(--border-main); border-right: 1px solid var(--border-light); padding: 8px 10px; text-align: center; white-space: nowrap; }
-        th { background-color: var(--bg-table-head); color: var(--text-table-head); position: sticky; top: 0; font-weight: normal;}
-        .excluded-row { background-color: var(--bg-excluded); color: var(--text-muted); }
-        .excluded-badge { font-size: 10px; background: var(--text-muted); color: white; padding: 2px 4px; border-radius: 3px; margin-left: 5px; }
+        .bg-primary { background-color: var(--color-primary); } .bg-blue { background-color: var(--color-income); } .bg-red { background-color: var(--color-expense); } .bg-gray { background-color: var(--border-light); color: var(--text-main); }
+        
+        /* 요약 카드 */
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+        .summary-card { background: var(--bg-box); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: center; }
+        .summary-card.main { grid-column: span 4; background: var(--text-title); color: white; padding: 20px; }
+        .summary-card .label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: bold; }
+        .summary-card.main .label { color: rgba(255,255,255,0.7); }
+        .summary-card .value { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .summary-card.main .value { font-size: 24px; color: white; }
+        .text-blue { color: var(--color-income); } .text-red { color: var(--color-expense); }
+
+        /* 테이블 미니멀화 */
+        .table-container { width: 100%; overflow-x: auto; background: var(--bg-box); border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border-bottom: 1px solid var(--border-light); padding: 12px 10px; text-align: center; white-space: nowrap; }
+        th { background-color: var(--bg-table-head); color: var(--text-muted); font-weight: bold; font-size: 11px; }
+        tr:last-child td { border-bottom: none; }
+        .num-wrap { display: inline-block; text-align: right; font-variant-numeric: tabular-nums; }
+        .badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: bold; background: var(--border-light); color: var(--text-muted); }
         .carried-row { background-color: var(--bg-carried); font-weight: bold; }
-        
-        .chart-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
-        .chart-label { width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .chart-bar-wrap { flex: 1; background: var(--bg-chart); height: 14px; border-radius: 7px; margin: 0 10px; }
-        .chart-bar { height: 100%; width: 0%; transition: width 0.3s; }
-        .chart-val { display: flex; width: 135px; justify-content: flex-end; align-items: baseline; font-weight: bold; font-variant-numeric: tabular-nums; }
-        .chart-val-amt { flex: 1; text-align: right; } .chart-val-pct { width: 48px; text-align: right; font-size: 11px; color: var(--text-muted); font-weight: normal; margin-left: 4px; }
-        
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-light); border: 1px solid var(--border-light); border-radius: 4px; }
-        .cal-header { background: var(--bg-table-head); color: var(--text-table-head); text-align: center; font-size: 12px; padding: 6px 0; }
-        .cal-day { background: var(--bg-box); min-height: 60px; padding: 4px; display: flex; flex-direction: column; text-align: right; }
-        .cal-date { font-size: 11px; font-weight: bold; margin-bottom: 2px; text-align: left; }
-        .cal-date.sun { color: #e74c3c; } .cal-date.sat { color: #2980b9; } .cal-date.other-month { color: var(--text-muted); opacity: 0.5; }
-        .cal-inc { color: var(--color-income); font-size: 10px; font-weight: bold; letter-spacing: -0.5px; } .cal-exp { color: var(--color-expense); font-size: 10px; font-weight: bold; letter-spacing: -0.5px; }
-        
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--modal-overlay); overflow: auto; }
-        .modal-content { background-color: var(--bg-box); margin: 5% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 800px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .close-modal { color: var(--text-muted); float: right; font-size: 24px; font-weight: bold; cursor: pointer; line-height: 1; margin-top: -5px; }
-        .settlement-chart-container { display: flex; height: 200px; align-items: flex-end; gap: 4px; padding-top: 20px; border-bottom: 1px solid var(--border-main); margin-bottom: 15px; overflow-x: auto; }
-        .settlement-bar-group { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 30px; }
+
+        /* 차트용 */
+        .settlement-chart-container { display: flex; height: 180px; align-items: flex-end; justify-content: space-around; gap: 4px; padding-top: 10px; border-bottom: 1px solid var(--border-main); margin-bottom: 15px; overflow-x: auto; }
+        .settlement-bar-group { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 25px; }
         .settlement-bars { display: flex; width: 100%; justify-content: center; gap: 1px; height: 100%; align-items: flex-end; }
-        .settlement-bar-inc, .settlement-bar-exp { width: 45%; min-height: 1px; border-radius: 2px 2px 0 0; }
+        .settlement-bar-inc, .settlement-bar-exp { width: 40%; min-height: 1px; border-radius: 2px 2px 0 0; }
         .settlement-bar-inc { background-color: var(--color-income); } .settlement-bar-exp { background-color: var(--color-expense); }
-        .settlement-month-label { font-size: 11px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
+        .settlement-month-label { font-size: 10px; margin-top: 5px; color: var(--text-muted); white-space: nowrap; }
 
-        .progress-container { width: 100%; background-color: var(--border-light); border-radius: 8px; margin: 10px 0; overflow: hidden; height: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
-        .progress-bar { height: 100%; background-color: var(--color-income); width: 0%; transition: width 0.8s ease-in-out; }
+        /* 달력 미니멀화 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-header { text-align: center; font-size: 10px; font-weight: bold; color: var(--text-muted); padding-bottom: 8px; }
+        .cal-day { background: var(--bg-sub); border-radius: 8px; min-height: 50px; padding: 4px; display: flex; flex-direction: column; align-items: flex-end; }
+        .cal-date { font-size: 11px; font-weight: 800; margin-bottom: 2px; align-self: flex-start; color: var(--text-main); }
+        .cal-date.sun { color: var(--color-expense); } .cal-date.sat { color: var(--color-income); } .cal-date.other-month { opacity: 0.3; }
+        .cal-inc { color: var(--color-income); font-size: 9px; font-weight: 800; letter-spacing: -0.5px; } .cal-exp { color: var(--color-expense); font-size: 9px; font-weight: 800; letter-spacing: -0.5px; }
 
-        /* =========================================
-           📱 모바일 최적화
-           ========================================= */
+        /* 프로그레스 바 & 리스트 */
+        .progress-container { width: 100%; background-color: var(--border-light); border-radius: 8px; margin: 10px 0; overflow: hidden; height: 10px; }
+        .progress-bar { height: 100%; background-color: var(--color-primary); width: 0%; transition: width 0.8s ease; border-radius: 8px; }
+        .simple-list { list-style: none; padding: 0; margin: 0; }
+        .simple-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+        .simple-list li:last-child { border-bottom: none; }
+
+        /* 모바일 보정 */
         @media screen and (max-width: 768px) {
-            body { padding: 6px; padding-bottom: 80px; }
-            h1 { font-size: 1.2em; margin-top: 25px; margin-bottom: 10px; }
-            .box { padding: 10px; margin-bottom: 8px; border-radius: 6px; }
-            .collapsible-header { font-size: 13px; padding: 2px 0; }
-            
-            .top-nav-bar { top: 8px; left: 8px; right: 8px; margin-bottom: 0; }
-            .history-btn { height: 30px; padding: 0 12px; font-size: 11px; }
-            
-            .bottom-nav { bottom: 12px; gap: 4px; padding: 0; justify-content: center; }
-            .bottom-nav .std-btn, .bottom-nav select { flex-shrink: 0; height: 34px; padding: 0 10px; font-size: 12px; width: auto; }
-            .btn-current { margin-left: 40px !important; }
-
-            input[type="text"], input[type="number"], input[type="date"], input[type="month"], select, .std-btn, textarea { height: 30px; font-size: 12px; padding: 0 6px; }
-            .util-btn { height: 24px; padding: 0 8px; font-size: 10px; }
-
-            .mobile-row { flex-wrap: wrap !important; gap: 4px !important; margin-bottom: 6px !important; }
+            .mobile-row { flex-wrap: wrap !important; gap: 8px !important; margin-bottom: 8px !important; }
             .mobile-row > * { flex: 1 1 45%; min-width: 100px !important; width: auto; }
             .mobile-row .btn-fixed { flex: 1 1 100%; min-width: 100% !important; } 
-            
-            .action-buttons { display: flex; flex-wrap: nowrap; gap: 4px; overflow-x: auto; width: 100%; padding-bottom: 2px; }
-            .action-buttons .std-btn { flex: 1; padding: 0 4px; font-size: 11px; white-space: nowrap; height: 32px; min-width: auto; }
-            
-            #inputFormGroup { display: flex; flex-direction: column; }
-            #inputFormGroup > .row-assets { order: 1; } #inputFormGroup > .row-date-repeat { order: 2; } #inputFormGroup > #repeatEndDateContainer { order: 3; } #inputFormGroup > .row-type-amount { order: 4; } #inputFormGroup > .row-desc-note { order: 5; } #inputFormGroup > .row-memo { order: 6; } #inputFormGroup > .row-custom { order: 7; } #inputFormGroup > .row-submit { order: 8; }
-            
-            .hide-on-mobile { display: none !important; }
-            .summary-box { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 10px 4px; margin-bottom: 10px; }
-            .summary-box div { flex: 1 1 28%; min-width: 80px; text-align: center; padding: 0; line-height: 1.2; font-size: 11px; }
-            .summary-box div > span:last-child { display: block; margin-top: 2px; font-size: 12px; font-weight: bold; }
-            #sumBalance { font-size: 13px !important; }
-            
-            .num-wrap { width: 60px; } 
-            table { font-size: 11px; } 
-            th, td { padding: 6px 4px; }
-            
-            .cal-day { min-height: 40px; padding: 2px; }
-            .cal-date { font-size: 10px; }
-            .cal-inc, .cal-exp { font-size: 9px; }
-            
-            .modal-content { margin: 10% auto; padding: 12px; width: 95%; }
-            .modal-header-nav { gap: 10px; margin-bottom: 10px; }
-            .modal-header-nav h2 { font-size: 15px; margin-bottom: 0; }
+            .box { padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+            .summary-card { padding: 10px 5px; }
+            .summary-card .value { font-size: 13px; }
+            input, select, .std-btn, textarea { height: 38px; font-size: 13px; }
+            th, td { padding: 10px 6px; }
         }
     </style>
 </head>
 <body>
 
-<div class="top-nav-bar">
-    <button id="undoBtn" class="history-btn" onclick="DataStore.undo()" disabled title="방금 전 데이터 변동 취소">↩ 취소</button>
-    <button id="redoBtn" class="history-btn" onclick="DataStore.redo()" disabled title="취소 내역 복구">↪ 재실행</button>
+<div class="top-header">
+    <div style="position: absolute; left: 15px; display: flex; gap: 5px;">
+        <button id="undoBtn" class="util-btn btn-gray" onclick="DataStore.undo()" disabled>↩</button>
+        <button id="redoBtn" class="util-btn btn-gray" onclick="DataStore.redo()" disabled>↪</button>
+    </div>
+    <div class="date-controller">
+        <button class="date-btn" onclick="UIManager.changeMonth(-1)">◀</button>
+        <div class="date-selects">
+            <select id="yearFilter" onchange="UIManager.render()"></select>
+            <span>년</span>
+            <select id="monthFilter" onchange="UIManager.render()">
+                <option value="all">전체</option>
+                <option value="01">1</option><option value="02">2</option><option value="03">3</option>
+                <option value="04">4</option><option value="05">5</option><option value="06">6</option>
+                <option value="07">7</option><option value="08">8</option><option value="09">9</option>
+                <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+            </select>
+            <span id="monthSuffix">월</span>
+        </div>
+        <button class="date-btn" onclick="UIManager.changeMonth(1)">▶</button>
+    </div>
+    <button class="btn-today" style="position: absolute; right: 15px;" onclick="UIManager.goToCurrentMonth()">오늘</button>
 </div>
 
 <div class="container">
-    <h1>통합 자산 가계부 by JM</h1>
 
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('actionButtonsContainer', 'actionToggleIcon')">
-            데이터 관리 (결산/백업/복원) <span id="actionToggleIcon">▼</span>
-        </div>
-        <div id="actionButtonsContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div class="action-buttons flex-row">
-                <button class="std-btn bg-blue flex-1" onclick="UIManager.openYearlySettlement()">연도 결산</button>
-                <button class="std-btn bg-green flex-1" onclick="AppCtrl.exportToCSV()">CSV 내보내기</button>
-                <input type="file" id="importCsvInput" style="display:none;" accept=".csv" onchange="AppCtrl.importFromCSV(event)">
-                <button class="std-btn bg-green flex-1" onclick="document.getElementById('importCsvInput').click()">CSV 불러오기</button>
-                <button class="std-btn bg-purple flex-1" onclick="AppCtrl.backupData()">데이터 백업</button>
-                <input type="file" id="restoreInput" style="display:none;" accept=".json, .txt" onchange="AppCtrl.restoreData(event)">
-                <button class="std-btn bg-orange flex-1" onclick="document.getElementById('restoreInput').click()">데이터 복원</button>
+    <div id="tab-ledger" class="tab-content active">
+        
+        <div class="summary-grid">
+            <div class="summary-card main">
+                <div class="label" id="sumBalanceText">최종 잔액</div>
+                <div class="value" id="sumBalance">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">이월 잔액</div>
+                <div class="value text-muted" id="carriedBalance">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">총 수입</div>
+                <div class="value text-blue" id="sumIncome">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">총 지출</div>
+                <div class="value text-red" id="sumExpense">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">순 증감</div>
+                <div class="value" id="sumNetBalance">0</div>
             </div>
         </div>
-    </div>
 
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('stockModuleContainer', 'stockToggleIcon')">
-            주식 계좌 수익률 관리 <span id="stockToggleIcon">▼</span>
-        </div>
-        <div id="stockModuleContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            
-            <div class="flex-row mobile-row" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border-main);">
-                <select id="stockAccountFilter" onchange="UIManager.currentStockAccount = this.value; UIManager.renderStockModule();" class="flex-1" style="font-weight: bold; background-color: var(--bg-highlight);"></select>
-                <input type="text" id="newStockAccountName" placeholder="새 계좌명 (예: ISA)" class="flex-1">
-                <button class="std-btn bg-purple btn-fixed" onclick="AppCtrl.addStockAccount()">계좌 추가</button>
-            </div>
-
-            <div class="input-area" style="margin-bottom: 15px;">
-                <div class="flex-row mobile-row">
-                    <input type="month" id="stockMonthInput" class="flex-1" style="min-width: 100px;">
-                    <input type="number" id="stockDepositInput" placeholder="당월 입금액 (+)" class="flex-1" style="min-width: 100px;">
-                    <input type="number" id="stockWithdrawalInput" placeholder="당월 출금액 (-)" class="flex-1" style="min-width: 100px;">
-                </div>
-                <div class="flex-row mobile-row">
-                    <input type="number" id="stockEndingBalanceInput" placeholder="월말 계좌 총 평가액 (필수)" class="flex-1" style="min-width: 100px;">
-                    <button class="std-btn bg-blue flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">선택 계좌에 기록 저장</button>
+        <div class="box">
+            <div class="collapsible-header" onclick="UIManager.toggleSection('monthlyMemoContainer', 'monthlyMemoToggleIcon')">
+                <span id="monthlyMemoTitle">월간 메모</span>
+                <div>
+                    <span id="monthlyMemoIndicator" style="color:var(--color-expense); font-size:12px; margin-right:8px; display:none;">[메모 있음]</span>
+                    <span id="monthlyMemoToggleIcon">▼</span>
                 </div>
             </div>
-
-            <div style="position: relative; height: 200px; width: 100%; margin-bottom: 15px;">
-                <canvas id="stockChartCanvas"></canvas>
+            <div id="monthlyMemoContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+                <div id="monthlyMemoNotAvailable" style="display:none; color:var(--text-muted); font-size:12px; text-align:center; padding: 10px 0;">특정 연도와 월을 필터에서 선택해야 해당 월의 메모를 작성할 수 있습니다.</div>
+                <div id="monthlyMemoEditArea">
+                    <textarea id="monthlyMemoTextarea" style="width:100%; height:80px; resize:none;" placeholder="이번 달의 예산, 목표, 특이사항 등을 기록하세요." oninput="AppCtrl.saveMonthlyMemo()"></textarea>
+                </div>
             </div>
+        </div>
 
+        <div class="box">
+            <div class="collapsible-header" onclick="UIManager.toggleSection('subscriptionContainer', 'subscriptionToggleIcon')">
+                💸 구독 / 고정비 통제소 <span id="subscriptionToggleIcon">▼</span>
+            </div>
+            <div id="subscriptionContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+                <div class="summary-grid" style="margin-bottom: 15px;">
+                    <div class="summary-card" style="grid-column: span 2;">
+                        <div class="label">월간 유출액</div>
+                        <div class="value text-red" id="subMonthlyTotal">0</div>
+                    </div>
+                    <div class="summary-card" style="grid-column: span 2;">
+                        <div class="label">연간 누적 타격</div>
+                        <div class="value text-red" id="subYearlyTotal" style="font-size: 16px;">0</div>
+                    </div>
+                </div>
+                
+                <div class="flex-row mobile-row" style="margin-bottom: 10px;">
+                    <input type="text" id="newSubName" placeholder="구독명 (예: 넷플릭스)" class="flex-1">
+                    <input type="number" id="newSubAmount" placeholder="결제금액" style="width: 80px;">
+                    <select id="newSubCycle" style="width: 70px; padding: 0 5px;">
+                        <option value="monthly">월</option><option value="yearly">년</option>
+                    </select>
+                    <button class="util-btn bg-primary" style="height: 42px; border-radius: 8px;" onclick="AppCtrl.addSubscription()">추가</button>
+                </div>
+                <ul class="simple-list" id="subscriptionList"></ul>
+            </div>
+        </div>
+
+        <div class="box">
+            <div class="box-title">가계부 내역 추가</div>
+            <div id="inputFormGroup"></div>
+        </div>
+
+        <div class="box">
+            <div class="box-title">달력 요약</div>
+            <div id="calendarUI"></div>
+        </div>
+
+        <div class="box" style="padding: 0; background: transparent; box-shadow: none;">
+            <div class="box-title" style="padding: 0 5px;">
+                상세 내역
+                <input type="text" id="searchInput" placeholder="검색..." oninput="UIManager.debouncedRender()" style="width: 120px; height: 30px; font-size: 12px; font-weight: normal;">
+            </div>
+            <select id="searchYearFilter" onchange="UIManager.render()" style="display:none;"></select>
             <div class="table-container">
                 <table>
-                    <thead>
-                        <tr>
-                            <th>연/월</th>
-                            <th>입금</th>
-                            <th>출금</th>
-                            <th>월말 총액</th>
-                            <th>월 순손익</th>
-                            <th>월 수익률</th>
-                            <th>누적 수익률</th>
-                            <th>관리</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stockTableBody">
-                    </tbody>
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
-            
-            <div style="text-align: right; margin-top: 10px;">
-                <button class="util-btn btn-del" onclick="AppCtrl.deleteStockAccount()">현재 계좌 전체 삭제</button>
+        </div>
+    </div>
+
+
+    <div id="tab-stats" class="tab-content">
+        <div class="box">
+            <div class="box-title">
+                <span id="chartTitle">월 통계</span>
+                <select id="chartTypeSelect" onchange="UIManager.render()" style="height: 28px; font-size: 11px; padding: 0 5px; font-weight: bold; color: var(--color-primary);">
+                    <option value="expense">지출</option><option value="income">수입</option><option value="all">통합</option>
+                </select>
+            </div>
+            <div style="position: relative; height: 230px; width: 100%;">
+                <canvas id="expenseChartCanvas"></canvas>
+                <div id="expenseChartEmpty" style="display:none; text-align:center; color:var(--text-muted); margin-top:100px; font-size:12px;">기록이 없습니다.</div>
+            </div>
+        </div>
+
+        <div class="box">
+            <div class="box-title" style="color: var(--color-primary);">
+                연도 결산 리포트 (<span id="settlementYearLabel"></span>년)
+            </div>
+            <div id="settlementChartContainer" class="settlement-chart-container"></div>
+            <div style="text-align:center; font-size:11px; margin-bottom:15px; font-weight: bold;">
+                <span style="color:var(--color-income);">■ 총 수입</span> <span style="color:var(--color-expense); margin-left:10px;">■ 총 지출</span>
+            </div>
+            <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                <table><thead><tr><th>월</th><th style="text-align:right;">수입</th><th style="text-align:right;">지출</th><th style="text-align:right;">순수익</th></tr></thead><tbody id="settlementTbody"></tbody></table>
+            </div>
+            <div class="flex-row" style="margin-top: 15px; margin-bottom: 0;">
+                <button class="std-btn bg-gray flex-1" onclick="UIManager.changeGlobalYear(-1)">◀ 이전 연도</button>
+                <button class="std-btn bg-gray flex-1" onclick="UIManager.changeGlobalYear(1)">다음 연도 ▶</button>
             </div>
         </div>
     </div>
 
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('monthlyMemoContainer', 'monthlyMemoToggleIcon')">
-            <span id="monthlyMemoTitle">월간 메모</span>
+
+    <div id="tab-assets" class="tab-content">
+        
+        <div class="box">
+            <div class="box-title">현금 및 부채 현황 <span style="font-size: 16px; font-weight: 900; color: var(--color-primary);" id="totalNetWorth">0 원</span></div>
+            <div id="assetList" style="margin-bottom: 15px;"></div>
+            
+            <div style="border-top: 1px solid var(--border-light); padding-top: 15px; margin-top: 10px;">
+                <div style="font-size: 12px; font-weight: bold; margin-bottom: 10px; color: var(--text-muted);">+ 새 자산/부채 추가</div>
+                <div class="flex-row mobile-row">
+                    <select id="newAssetType" class="flex-1"><option value="asset">자산</option><option value="liability">부채</option></select>
+                    <input type="text" id="newAssetName" placeholder="이름 (예: 토스파킹)" class="flex-1">
+                </div>
+                <div class="flex-row mobile-row">
+                    <input type="number" id="newAssetBalance" placeholder="초기 잔액 (원)" class="flex-1">
+                    <input type="number" step="0.01" id="newAssetRate" placeholder="이율 (%)" class="flex-1" style="max-width: 80px;">
+                </div>
+                <div class="flex-row mobile-row" style="display: none;">
+                    <input type="date" id="newAssetDate"><input type="date" id="newAssetMaturity">
+                </div>
+                <div class="flex-row mobile-row" style="margin-bottom: 0;">
+                    <button id="submitAssetBtn" class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addAsset()">추가하기</button>
+                    <button id="cancelAssetEditBtn" class="std-btn btn-gray flex-1 btn-fixed" onclick="UIManager.cancelAssetEdit()" style="display:none;">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="box" id="debtSimulatorBox" style="display: none;">
+            <div class="box-title">🎯 부채 상환 목표 관리</div>
+            <div class="flex-row mobile-row" style="align-items: center; background: var(--bg-sub); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                <span style="font-size:12px; font-weight:bold; color:var(--text-title); min-width: 80px;">목표 완납일</span>
+                <input type="month" id="debtTargetMonth" onchange="AppCtrl.updateDebtTarget(this.value)" style="flex: 1; border:none; background: transparent; font-weight: bold; text-align: right; color: var(--color-primary);">
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 15px;">
+                <span style="font-size:12px; color:var(--text-muted);">남은 기간 <strong style="color:var(--text-title);" id="debtRemainingMonths">0</strong>개월 동안 필요한 월 상환액</span><br>
+                <span style="font-size:28px; font-weight:900; color:var(--color-expense);" id="debtMonthlyRequired">0</span><span style="font-size:14px; font-weight:bold;">원</span>
+            </div>
+            
             <div>
-                <span id="monthlyMemoIndicator" style="color:var(--color-expense); font-size:12px; margin-right:8px; display:none;">[메모 있음]</span>
-                <span id="monthlyMemoToggleIcon">▼</span>
-            </div>
-        </div>
-        <div id="monthlyMemoContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div id="monthlyMemoNotAvailable" style="display:none; color:var(--text-muted); font-size:12px; text-align:center; padding: 10px 0;">
-                특정 연도와 월을 필터에서 선택해야 해당 월의 메모를 작성할 수 있습니다.
-            </div>
-            <div id="monthlyMemoEditArea">
-                <textarea id="monthlyMemoTextarea" style="width:100%; height:100px; padding:10px; border:1px solid var(--border-input); border-radius:4px; font-family:inherit; resize:vertical; background-color:var(--bg-input); color:var(--text-main);" placeholder="이번 달의 예산, 목표, 특이사항 등을 기록하세요." oninput="AppCtrl.saveMonthlyMemo()"></textarea>
-            </div>
-        </div>
-    </div>
-
-    <div class="box" id="debtSimulatorBox" style="display: none;">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('debtSimContent', 'debtSimToggleIcon')">
-            부채 상환 대시보드 <span id="debtSimToggleIcon">▼</span>
-        </div>
-        <div id="debtSimContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 15px;">
-            <div class="flex-row mobile-row" style="align-items: flex-end;">
-                <div style="flex:1; min-width:130px;">
-                    <span style="font-size:11px; color:var(--text-muted);">목표 완납일 (연/월)</span>
-                    <input type="month" id="debtTargetMonth" onchange="AppCtrl.updateDebtTarget(this.value)" style="width:100%;">
-                </div>
-                <div style="flex:1; min-width:130px; text-align:right;">
-                    <span style="font-size:11px; color:var(--text-muted);">남은 기간</span><br>
-                    <span style="font-size:18px; font-weight:bold; color:var(--color-expense);" id="debtRemainingMonths">0</span>개월
-                </div>
-            </div>
-            
-            <div style="margin-top: 15px; padding: 15px; background: var(--bg-highlight); border-radius: 8px; text-align: center; border: 1px solid var(--border-highlight);">
-                <span style="font-size:12px; color:var(--text-title);">완납 목표 달성을 위한 권장 월 상환액</span><br>
-                <span style="font-size:24px; font-weight:bold; color:var(--color-income);" id="debtMonthlyRequired">0</span>원
-            </div>
-            
-            <div style="margin-top: 15px;">
-                <div style="display:flex; justify-content:space-between; font-size:12px;">
-                    <span>현재 상환 진행률</span>
-                    <span id="debtProgressText" style="font-weight:bold; color: var(--color-income);">0%</span>
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight: 800;">
+                    <span>상환 진행률</span>
+                    <span id="debtProgressText" style="color: var(--color-primary);">0%</span>
                 </div>
                 <div class="progress-container">
                     <div id="debtProgressBar" class="progress-bar"></div>
                 </div>
-                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top: 6px;">
-                    <span>총 상환액: <span id="debtPaidAmount" style="font-weight:bold; color:var(--text-main);">0</span>원</span>
-                    <span>남은 부채: <span id="debtCurrentAmount" style="font-weight:bold; color:var(--color-expense);">0</span>원</span>
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
+                    <span>갚은 돈: <span id="debtPaidAmount">0</span>원</span>
+                    <span>남은 빚: <span id="debtCurrentAmount" style="color:var(--color-expense); font-weight:bold;">0</span>원</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="box">
+            <div class="box-title">📈 주식 계좌 수익률 (디츠 방식)</div>
+            <div class="flex-row mobile-row" style="margin-bottom: 15px;">
+                <select id="stockAccountFilter" onchange="UIManager.currentStockAccount = this.value; UIManager.renderStockModule();" class="flex-1" style="font-weight: 800; background-color: var(--bg-sub); border:none;"></select>
+                <button class="util-btn btn-gray" onclick="const n=prompt('새 계좌명 입력'); if(n) { document.getElementById('newStockAccountName').value=n; AppCtrl.addStockAccount(); }">+ 계좌</button>
+                <input type="hidden" id="newStockAccountName">
+            </div>
+
+            <div style="position: relative; height: 180px; width: 100%; margin-bottom: 15px;">
+                <canvas id="stockChartCanvas"></canvas>
+            </div>
+
+            <div class="table-container" style="margin-bottom: 15px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>월</th>
+                            <th style="text-align:right;">순입금</th>
+                            <th style="text-align:right;">총액</th>
+                            <th style="text-align:center;">수익률</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockTableBody"></tbody>
+                </table>
+            </div>
+
+            <div style="border-top: 1px solid var(--border-light); padding-top: 15px;">
+                <div class="flex-row mobile-row">
+                    <input type="month" id="stockMonthInput" class="flex-1">
+                    <input type="number" id="stockDepositInput" placeholder="당월 입금액 (+)" class="flex-1">
+                </div>
+                <div class="flex-row mobile-row">
+                    <input type="number" id="stockWithdrawalInput" placeholder="당월 출금액 (-)" class="flex-1">
+                    <input type="number" id="stockEndingBalanceInput" placeholder="월말 계좌 총액" class="flex-1">
+                </div>
+                <div class="flex-row mobile-row" style="margin-bottom: 0;">
+                    <button class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">선택 계좌에 월간 기록 저장</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('assetContainer', 'assetToggleIcon')">
-            자산 및 부채 현황 <span id="assetToggleIcon">▼</span>
-        </div>
-        <div id="assetContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
+
+    <div id="tab-settings" class="tab-content">
+        
+        <div class="box">
+            <div class="box-title" style="color: var(--color-expense);">데이터 백업 및 복원 (중요)</div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">안전한 곳에 주기적으로 데이터를 백업하십시오. 데이터는 서버가 아닌 <strong>오직 이 브라우저</strong>에만 보관되므로 캐시 삭제 시 소멸될 수 있습니다.</p>
             <div class="flex-row mobile-row">
-                <select id="newAssetType" class="flex-1"><option value="asset">순자산</option><option value="liability">부채</option></select>
-                <input type="text" id="newAssetName" placeholder="자산명 (예: 대출)" class="flex-1">
+                <button class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.backupData()">전체 데이터 백업 (.txt)</button>
+                <button class="std-btn bg-gray flex-1 btn-fixed" onclick="document.getElementById('restoreInput').click()">백업 데이터 복원</button>
+                <input type="file" id="restoreInput" style="display:none;" accept=".json, .txt" onchange="AppCtrl.restoreData(event)">
             </div>
-            <div class="flex-row mobile-row">
-                <input type="number" id="newAssetBalance" placeholder="초기 잔액 (원)" class="flex-1">
-                <input type="number" step="0.01" id="newAssetRate" placeholder="이율 (%)" class="flex-1">
+            <div class="flex-row mobile-row" style="margin-top: 10px; margin-bottom: 0;">
+                <button class="std-btn bg-blue flex-1 btn-fixed" onclick="AppCtrl.exportToCSV()">현재 목록 CSV 내보내기</button>
+                <button class="std-btn bg-gray flex-1 btn-fixed" onclick="document.getElementById('importCsvInput').click()">CSV 엑셀 불러오기</button>
+                <input type="file" id="importCsvInput" style="display:none;" accept=".csv" onchange="AppCtrl.importFromCSV(event)">
             </div>
-            <div class="flex-row mobile-row">
-                <div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:100px;"><span style="font-size:11px; color:var(--text-muted);">기준일자</span><input type="date" id="newAssetDate" style="width:100%;"></div>
-                <div style="flex:1; display:flex; flex-direction:column; gap:2px; min-width:100px;"><span style="font-size:11px; color:var(--text-muted);">만기일자</span><input type="date" id="newAssetMaturity" style="width:100%;"></div>
-            </div>
-            <div class="flex-row mobile-row">
-                <button id="submitAssetBtn" class="std-btn bg-green flex-1 btn-fixed" onclick="AppCtrl.addAsset()">자산 추가</button>
-                <button id="cancelAssetEditBtn" class="std-btn btn-gray flex-1 btn-fixed" onclick="UIManager.cancelAssetEdit()" style="display:none;">취소</button>
-            </div>
-            <div id="assetList" style="margin-top: 15px;"></div>
-            <div style="text-align: right; margin-top: 10px; font-size: 13px; color:var(--text-muted);">총 순자산: <span id="totalNetWorth" style="font-weight: bold; font-size: 16px; color:var(--text-main);">0</span> 원</div>
         </div>
-    </div>
 
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('calendarContainer', 'calendarToggleIcon')">
-            달력 <span id="calendarToggleIcon">▼</span>
-        </div>
-        <div id="calendarContainer" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div id="calendarUI"></div>
-        </div>
-    </div>
-    
-    <div class="box">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('inputFormContainer', 'inputToggleIcon')">
-            가계부 내역 입력 <span id="inputToggleIcon">▼</span>
-        </div>
-        <div id="inputFormContainer" class="input-area" style="display: none; margin-top: 10px;">
-            <div id="inputFormGroup"></div>
-        </div>
-    </div>
-
-    <div class="box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 id="chartTitle" style="margin: 0; color: var(--text-title); font-size: 15px;">전체 기간 지출 통계</h3>
-            <select id="chartTypeSelect" onchange="UIManager.render()" style="width: auto;">
-                <option value="expense">지출</option><option value="income">수입</option><option value="all">수입/지출 통합</option>
-            </select>
-        </div>
-        <div style="position: relative; height: 220px; width: 100%;">
-            <canvas id="expenseChartCanvas"></canvas>
-            <div id="expenseChartEmpty" style="display:none; text-align:center; color:var(--text-muted); margin-top:80px; font-size:12px;">기록이 없습니다.</div>
-        </div>
-    </div>
-
-    <div class="summary-box">
-        <div>이월<span class="hide-on-mobile"> 잔액</span><br><span class="text-gray" id="carriedBalance">0</span></div>
-        <div><span id="periodLabelInc" class="hide-on-mobile">해당 기간 </span>수입<br><span class="text-blue" id="sumIncome">0</span></div>
-        <div><span id="periodLabelExp" class="hide-on-mobile">해당 기간 </span>지출<br><span class="text-red" id="sumExpense">0</span></div>
-        <div><span id="periodLabelNet" class="hide-on-mobile">해당 기간 </span>잔액<br><span id="sumNetBalance">0</span></div>
-        <div><span id="sumBalanceText">최종 잔액</span><br><span id="sumBalance" style="color:var(--text-title);">0</span></div>
-    </div>
-
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
-        <h2 id="detailTitle" style="margin: 0; font-size: 16px;">상세 내역</h2>
-    </div>
-    <div style="margin-bottom: 10px; display: flex; gap: 8px;">
-        <select id="searchYearFilter" onchange="UIManager.render()" style="width: 100px; height: 36px; padding: 0 5px; font-size: 13px;"></select>
-        <input type="text" id="searchInput" placeholder="내용, 금액 검색..." oninput="UIManager.debouncedRender()" style="flex: 1; height:36px; padding:0 10px;">
-    </div>
-    
-    <div class="table-container">
-        <table>
-            <thead id="tableHead"></thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-    </div>
-
-    <div class="box" style="margin-top: 20px;">
-        <div class="collapsible-header" onclick="UIManager.toggleSection('customColContent', 'colToggleIcon')">
-            상세 내역 (열) 관리 <span id="colToggleIcon">▼</span>
-        </div>
-        <div id="customColContent" style="display: none; margin-top: 10px; border-top: 1px solid var(--border-light); padding-top: 10px;">
-            <div class="flex-row mobile-row" style="margin-bottom: 10px;">
+        <div class="box">
+            <div class="box-title">상세 내역 커스텀 열 추가</div>
+            <ul class="simple-list" id="customColList" style="margin-bottom: 10px;"></ul>
+            <div class="flex-row mobile-row" style="margin-bottom: 0;">
                 <input type="text" id="newColName" placeholder="새 항목 이름 (예: 결제수단)" class="flex-1">
-                <button class="std-btn btn-fixed" onclick="AppCtrl.addColumn()">추가</button>
+                <button class="std-btn bg-gray btn-fixed" onclick="AppCtrl.addColumn()">추가</button>
             </div>
-            <ul class="col-list" id="customColList"></ul>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
+            통합 자산 가계부 System v3.0<br>
+            Designed by JM Mentor
         </div>
     </div>
+
 </div>
 
-<div class="bottom-nav">
-    <button class="std-btn" onclick="UIManager.changeMonth(-1)" title="이전 달">◀</button>
-    <select id="yearFilter" onchange="UIManager.render()"></select>
-    <select id="monthFilter" onchange="UIManager.render()">
-        <option value="all">전체 월</option>
-        <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
-        <option value="04">4월</option><option value="05">5월</option><option value="06">6월</option>
-        <option value="07">7월</option><option value="08">8월</option><option value="09">9월</option>
-        <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
-    </select>
-    <button class="std-btn" onclick="UIManager.changeMonth(1)" title="다음 달">▶</button>
-    <button class="std-btn btn-current" onclick="UIManager.goToCurrentMonth()" title="현재 달로 이동">현재</button>
-</div>
-
-<div id="settlementModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" onclick="UIManager.closeYearlySettlement()">&times;</span>
-        <div class="modal-header-nav"><h2 id="settlementYearLabel">0000년 결산</h2></div>
-        <div id="settlementChartContainer"></div>
-        <div style="text-align:center; font-size:11px; margin-bottom:15px;"><span style="color:var(--color-income);">■ 총 수입</span> <span style="color:var(--color-expense); margin-left:10px;">■ 총 지출</span></div>
-        <div class="table-container" style="max-height: 250px;">
-            <table><thead><tr><th>월</th><th>수입</th><th>지출</th><th>순수익</th></tr></thead><tbody id="settlementTbody"></tbody></table>
-        </div>
-        <div class="modal-footer-nav flex-row">
-            <button class="std-btn flex-1" onclick="UIManager.changeSettlementYear(-1)">◀ 이전 연도</button>
-            <button class="std-btn flex-1" onclick="UIManager.changeSettlementYear(1)">다음 연도 ▶</button>
-        </div>
+<div class="bottom-tab-bar">
+    <div class="tab-item active" onclick="UIManager.switchTab('tab-ledger', this)">
+        <span class="tab-icon">📝</span><span>장부</span>
+    </div>
+    <div class="tab-item" onclick="UIManager.switchTab('tab-stats', this)">
+        <span class="tab-icon">📊</span><span>통계</span>
+    </div>
+    <div class="tab-item" onclick="UIManager.switchTab('tab-assets', this)">
+        <span class="tab-icon">💰</span><span>자산</span>
+    </div>
+    <div class="tab-item" onclick="UIManager.switchTab('tab-settings', this)">
+        <span class="tab-icon">⚙️</span><span>설정</span>
     </div>
 </div>
 
@@ -445,7 +468,7 @@
     // 2. DataStore
     // ==========================================
     const DataStore = {
-        state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {}, stockRecords: [], stockAccounts: [] },
+        state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {}, stockRecords: [], stockAccounts: [], subscriptions: [] },
         history: { stack: [], pointer: -1, MAX: 5 },
         
         safeParse(key, defaultVal) {
@@ -467,25 +490,20 @@
         init() {
             this.state.entries = this.safeParse('accountBook_v2', []);
             if (!Array.isArray(this.state.entries)) this.state.entries = [];
-            
             this.state.customCols = this.safeParse('accountCols', []);
             if (!Array.isArray(this.state.customCols)) this.state.customCols = [];
-            
             this.state.assets = this.safeParse('accountAssets', []);
             if (!Array.isArray(this.state.assets)) this.state.assets = [];
-            
             this.state.recurringTasks = this.safeParse('accountRecurring_v2', []);
             if (!Array.isArray(this.state.recurringTasks)) this.state.recurringTasks = [];
-            
             this.state.stockRecords = this.safeParse('accountStocks', []);
             if (!Array.isArray(this.state.stockRecords)) this.state.stockRecords = [];
-
             this.state.stockAccounts = this.safeParse('accountStockAccounts', []);
             if (!Array.isArray(this.state.stockAccounts)) this.state.stockAccounts = [];
-            
+            this.state.subscriptions = this.safeParse('accountSubscriptions', []);
+            if (!Array.isArray(this.state.subscriptions)) this.state.subscriptions = [];
             this.state.monthlyMemos = this.safeParse('accountMonthlyMemos', {});
             if (typeof this.state.monthlyMemos !== 'object' || this.state.monthlyMemos === null) this.state.monthlyMemos = {};
-            
             this.state.settings = this.safeParse('accountSettings', {});
             if (typeof this.state.settings !== 'object' || this.state.settings === null) this.state.settings = {};
             
@@ -564,6 +582,7 @@
                 localStorage.setItem('accountSettings', JSON.stringify(this.state.settings));
                 localStorage.setItem('accountStocks', JSON.stringify(this.state.stockRecords));
                 localStorage.setItem('accountStockAccounts', JSON.stringify(this.state.stockAccounts));
+                localStorage.setItem('accountSubscriptions', JSON.stringify(this.state.subscriptions));
             } catch (e) {
                 if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업(JSON) 후 오래된 내역을 삭제하세요.');
             }
@@ -612,6 +631,17 @@
         searchTimeout: null,
         currentStockAccount: '기본 계좌', 
 
+        switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if(element) element.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            if(tabId === 'tab-stats' && this.expenseChartObj) this.expenseChartObj.resize();
+            if(tabId === 'tab-assets' && this.stockChartObj) this.stockChartObj.resize();
+        },
+
         debouncedRender() {
             if (this.searchTimeout) clearTimeout(this.searchTimeout);
             this.searchTimeout = setTimeout(() => {
@@ -623,8 +653,8 @@
             const yearSelect = document.getElementById('yearFilter');
             const searchYearSelect = document.getElementById('searchYearFilter');
             const currentYear = new Date().getFullYear();
-            let optionsHtml = '<option value="all">전체 연도</option>';
-            for(let i = 2000; i <= 2100; i++) optionsHtml += `<option value="${i}" ${i === currentYear ? 'selected' : ''}>${i}년</option>`;
+            let optionsHtml = '<option value="all">전체</option>';
+            for(let i = 2000; i <= 2100; i++) optionsHtml += `<option value="${i}" ${i === currentYear ? 'selected' : ''}>${i}</option>`;
             yearSelect.innerHTML = optionsHtml;
             if(searchYearSelect) searchYearSelect.innerHTML = optionsHtml;
             document.getElementById('monthFilter').value = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -700,7 +730,7 @@
             const list = document.getElementById('customColList');
             list.innerHTML = DataStore.state.customCols.map(col => `
                 <li>
-                    <input type="text" value="${Utils.escHtml(col.name)}" onchange="AppCtrl.updateColName('${Utils.escHtml(col.id)}', this.value)">
+                    <input type="text" value="${Utils.escHtml(col.name)}" onchange="AppCtrl.updateColName('${Utils.escHtml(col.id)}', this.value)" style="flex:1; border:none; font-weight:bold; background:transparent;">
                     <button class="util-btn btn-del" onclick="AppCtrl.deleteCol('${Utils.escHtml(col.id)}')">삭제</button>
                 </li>
             `).join('');
@@ -712,40 +742,41 @@
             DataStore.state.assets.forEach(a => { assetOptions += `<option value="${Utils.escHtml(a.id)}">${Utils.escHtml(a.type === 'liability' ? '[부채]' : '[자산]')} ${Utils.escHtml(a.name)}</option>`; });
 
             let html = `
-                <div class="row-assets flex-row mobile-row" style="width: 100%;">
-                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
-                        <select id="linkedAsset1" style="width:100%;" title="연동 자산 1">${assetOptions}</select>
-                        <select id="linkedAssetOp1" style="width:45px; padding:0 4px;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
-                    </div>
-                    <div class="flex-1" style="display:flex; gap:2px; align-items:flex-end; min-width:100px;">
-                        <select id="linkedAsset2" style="width:100%;" title="연동 자산 2 (옵션)">${assetOptions}</select>
-                        <select id="linkedAssetOp2" style="width:45px; padding:0 4px;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
-                    </div>
-                </div>
                 <div class="row-date-repeat flex-row mobile-row" style="width: 100%;">
                     <input type="date" id="dateInput" required class="flex-1" style="min-width:100px;">
-                    <select id="repeatType" onchange="UIManager.toggleRepeatDate()" class="flex-1" style="min-width:100px;">
-                        <option value="none">반복 없음</option><option value="daily">매일</option><option value="monthly">매달</option><option value="yearly">매년</option>
+                    <select id="repeatType" onchange="UIManager.toggleRepeatDate()" class="flex-1" style="min-width:100px; color:var(--color-primary); font-weight:bold;">
+                        <option value="none">반복 없음</option><option value="daily">매일 반복</option><option value="monthly">매달 반복</option><option value="yearly">매년 반복</option>
                     </select>
                 </div>
                 <div id="repeatEndDateContainer" style="display:none; width: 100%; margin-bottom:10px;">
-                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:2px;">반복 종료일</span>
-                    <input type="date" id="repeatEndDate" style="width:100%; padding:0 8px;">
+                    <span style="font-size:11px; color:var(--color-expense); display:block; margin-bottom:2px; font-weight:bold;">반복 종료일 (필수)</span>
+                    <input type="date" id="repeatEndDate" style="width:100%;">
                 </div>
                 <div class="row-type-amount flex-row mobile-row" style="width: 100%;">
-                    <select id="typeInput" class="flex-1" style="min-width:100px;"><option value="expense">지출</option><option value="income">수입</option><option value="transfer">이체/상환</option></select>
-                    <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1" style="min-width:100px;">
+                    <select id="typeInput" class="flex-1" style="min-width:100px; font-weight:bold;"><option value="expense">지출</option><option value="income">수입</option><option value="transfer">이체/상환</option></select>
+                    <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1" style="min-width:100px; font-weight:bold; color:var(--color-expense);">
                 </div>
                 <div class="row-desc-note flex-row mobile-row" style="width: 100%;">
                     <input type="text" id="descInput" list="descHistoryList" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
-                    <input type="text" id="noteInput" list="noteHistoryList" placeholder="비고 (간단한 요약)" class="flex-1" style="min-width:100px;">
+                    <input type="text" id="noteInput" list="noteHistoryList" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
                 </div>
-                <div class="row-memo" style="width: 100%; margin-bottom:10px;">
+                <div class="row-assets flex-row mobile-row" style="width: 100%; background: var(--bg-highlight); padding: 8px; border-radius: 8px; margin-bottom: 12px;">
+                    <div style="font-size:11px; font-weight:bold; color:var(--color-primary); width:100%; margin-bottom:2px;">자산/부채 연동 (옵션)</div>
+                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
+                        <select id="linkedAsset1" style="flex:1;" title="연동 자산 1">${assetOptions}</select>
+                        <select id="linkedAssetOp1" style="width:45px; padding:0;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
+                    </div>
+                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
+                        <select id="linkedAsset2" style="flex:1;" title="연동 자산 2">${assetOptions}</select>
+                        <select id="linkedAssetOp2" style="width:45px; padding:0;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
+                    </div>
+                </div>
+                <div class="row-memo" style="width: 100%; margin-bottom:15px;">
                     <div onclick="UIManager.toggleMemo()" style="cursor:pointer; font-size:12px; color:var(--text-title); font-weight:bold; display:flex; align-items:center;">
-                        <span id="memoToggleIcon" style="margin-right:5px; margin-top:1px;">▶</span> 해당 항목 상세 메모 (옵션)
+                        <span id="memoToggleIcon" style="margin-right:5px;">▶</span> 긴 상세 메모 작성하기
                         <span id="memoIndicator" style="color:var(--color-expense); margin-left:8px; display:none; font-size:11px;">[메모 기록됨]</span>
                     </div>
-                    <textarea id="memoInput" style="display:none; width:100%; height:60px; margin-top:6px; padding:8px; border:1px solid var(--border-input); border-radius:4px; font-family:inherit; resize:vertical; background-color:var(--bg-input); color:var(--text-main);" placeholder="상세한 메모를 남겨보세요." oninput="UIManager.checkMemoContent()"></textarea>
+                    <textarea id="memoInput" style="display:none; width:100%; height:60px; margin-top:8px; resize:none;" placeholder="상세한 메모를 남겨보세요." oninput="UIManager.checkMemoContent()"></textarea>
                 </div>
             `;
             if (DataStore.state.customCols.length > 0) {
@@ -755,14 +786,14 @@
             }
             html += `
                 <div class="row-submit flex-row" style="width: 100%; justify-content: space-between; align-items: center; margin-top: 5px;">
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px;">
-                        <label class="checkbox-label" style="color:var(--text-muted); font-size:12px;"><input type="checkbox" id="excludeStatsOnlyInput"> 통계에서만 제외</label>
-                        <label class="checkbox-label"><input type="checkbox" id="excludeInput"> 완전 제외 (자산+통계)</label>
+                    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 120px;">
+                        <label class="checkbox-label" style="color:var(--text-muted); font-size:11px;"><input type="checkbox" id="excludeStatsOnlyInput"> 차트 통계에서만 제외</label>
+                        <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
                     </div>
                     <div style="display:flex; gap:6px; flex:1; min-width: 120px; justify-content: flex-end;">
                         <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1;">초기화</button>
                         <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">수정 취소</button>
-                        <button id="submitBtn" class="std-btn bg-blue" onclick="AppCtrl.submitEntry()" style="flex:2;">내역 등록</button>
+                        <button id="submitBtn" class="std-btn bg-title" style="background:var(--text-title); flex:2;" onclick="AppCtrl.submitEntry()">내역 등록</button>
                     </div>
                 </div>
                 <div id="recurringListContainer" style="width:100%;"></div>
@@ -806,11 +837,11 @@
             let container = document.getElementById('recurringListContainer');
             if (!container) return;
             if (DataStore.state.recurringTasks.length === 0) { container.innerHTML = ''; return; }
-            let html = '<div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-highlight); width:100%;"><strong style="font-size:12px; color:var(--text-title);">[대기 중인 자동 예약]</strong><ul style="list-style:none; padding:0; margin:5px 0 0 0; font-size:11px;">';
+            let html = '<div style="margin-top:15px; padding-top:15px; border-top:1px dashed var(--border-light); width:100%;"><strong style="font-size:12px; color:var(--color-primary);">[대기 중인 자동 예약]</strong><ul class="simple-list" style="margin-top:5px; font-size:11px;">';
             DataStore.state.recurringTasks.forEach(t => {
                 const rType = t.repeatType === 'daily' ? '매일' : (t.repeatType === 'monthly' ? '매달' : '매년');
-                html += `<li style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; background:var(--bg-box); padding:6px; border-radius:4px; border:1px solid var(--border-light);">
-                    <span>🗓️ ${Utils.escHtml(t.nextDate)} <strong>${Utils.escHtml(t.desc)}</strong> (${(t.amount||0).toLocaleString()}원, ${rType})</span>
+                html += `<li style="padding: 8px 0;">
+                    <div>🗓️ ${Utils.escHtml(t.nextDate)} <strong style="color:var(--text-title);">${Utils.escHtml(t.desc)}</strong> (${(t.amount||0).toLocaleString()}원, ${rType})</div>
                     <button class="util-btn btn-del" onclick="AppCtrl.deleteRecurring('${Utils.escHtml(t.id)}')">취소</button>
                 </li>`;
             });
@@ -861,26 +892,38 @@
             const listEl = document.getElementById('assetList');
             if (DataStore.state.assets.length === 0) {
                 listEl.innerHTML = '<p style="text-align:center; font-size:12px; color:var(--text-muted); margin:0;">등록된 자산/부채가 없습니다.</p>';
-                document.getElementById('totalNetWorth').innerText = '0';
+                document.getElementById('totalNetWorth').innerText = '0 원';
                 return;
             }
 
-            let html = `<div class="table-container"><table><thead><tr><th style="width: 40px;">분류</th><th>자산명</th><th style="text-align: right; padding-right: 15px;">잔액</th><th style="width: 80px;">관리</th></tr></thead><tbody>`;
+            let html = `<ul class="simple-list" style="margin-bottom: 0;">`;
             DataStore.state.assets.forEach(a => {
                 const cal = assetMap[a.id]; const isLia = cal.type === 'liability';
                 if (isLia) totalLiability += cal.currentBalance; else totalAsset += cal.currentBalance;
-                let meta = `기준: ${cal.inputDate || '-'}`; if (cal.maturityDate) meta += ` | 만기: ${cal.maturityDate}`;
-                if (cal.rate > 0) meta += ` | ${cal.rate}%`; meta += ` | <span style="color:var(--color-warning); font-weight:bold;">최근: ${cal.lastUpdated}</span>`;
-                html += `<tr>
-                    <td><span style="font-size:11px; font-weight:bold; color:${isLia ? 'var(--color-expense)' : 'var(--color-income)'};">${isLia ? '부채' : '자산'}</span></td>
-                    <td style="text-align: left;"><div style="font-weight: bold; color: var(--text-title);">${Utils.escHtml(cal.name)}</div><div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${meta}</div></td>
-                    <td class="${isLia ? 'text-red' : 'text-blue'}" style="text-align: right; padding-right: 15px;"><span style="font-weight: bold; font-variant-numeric: tabular-nums;">${cal.currentBalance.toLocaleString()}</span></td>
-                    <td style="white-space: nowrap;"><button class="util-btn btn-edit" onclick="AppCtrl.editAsset('${Utils.escHtml(a.id)}')">수정</button> <button class="util-btn btn-del" onclick="AppCtrl.deleteAsset('${Utils.escHtml(a.id)}')">삭제</button></td>
-                </tr>`;
+                let meta = `최근: ${cal.lastUpdated}`; if (cal.maturityDate) meta += ` | 만기: ${cal.maturityDate}`; if (cal.rate > 0) meta += ` | ${cal.rate}%`;
+                
+                html += `<li>
+                    <div style="flex: 1;">
+                        <div style="font-size:10px; font-weight:bold; color:${isLia ? 'var(--color-expense)' : 'var(--color-income)'}; margin-bottom:2px;">${isLia ? '부채' : '자산'}</div>
+                        <div style="font-size:14px; font-weight:800; color:var(--text-title);">${Utils.escHtml(cal.name)}</div>
+                        <div style="font-size:10px; color:var(--text-muted);">${meta}</div>
+                    </div>
+                    <div style="flex: 1; text-align: right; margin-right: 15px;">
+                        <div class="${isLia ? 'text-red' : 'text-blue'}" style="font-size:16px; font-weight:800; font-variant-numeric: tabular-nums;">${cal.currentBalance.toLocaleString()}원</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <button class="util-btn btn-gray" onclick="AppCtrl.editAsset('${Utils.escHtml(a.id)}')">수정</button> 
+                        <button class="util-btn btn-del" onclick="AppCtrl.deleteAsset('${Utils.escHtml(a.id)}')">삭제</button>
+                    </div>
+                </li>`;
             });
-            html += `</tbody></table></div>`;
+            html += `</ul>`;
             listEl.innerHTML = html;
-            document.getElementById('totalNetWorth').innerText = (totalAsset - totalLiability).toLocaleString();
+            
+            const netWorth = totalAsset - totalLiability;
+            const netWorthEl = document.getElementById('totalNetWorth');
+            netWorthEl.innerText = netWorth.toLocaleString() + ' 원';
+            netWorthEl.style.color = netWorth < 0 ? 'var(--color-expense)' : 'var(--color-primary)';
         },
 
         renderDebtSimulator() {
@@ -957,7 +1000,53 @@
             document.getElementById('debtCurrentAmount').innerText = currentTotal.toLocaleString();
         },
 
-        // [변경됨] 테이블에 월 수익률과 누적 수익률 독립 표시
+        renderSubscriptionModule() {
+            const listEl = document.getElementById('subscriptionList');
+            if (!listEl) return;
+
+            let totalMonthly = 0;
+            let totalYearly = 0;
+            let html = '';
+
+            DataStore.state.subscriptions.forEach(sub => {
+                let monthlyEquivalent = 0;
+                let yearlyEquivalent = 0;
+                
+                if (sub.cycle === 'monthly') {
+                    monthlyEquivalent = sub.amount;
+                    yearlyEquivalent = sub.amount * 12;
+                } else if (sub.cycle === 'yearly') {
+                    monthlyEquivalent = sub.amount / 12;
+                    yearlyEquivalent = sub.amount;
+                }
+
+                totalMonthly += monthlyEquivalent;
+                totalYearly += yearlyEquivalent;
+
+                html += `<li>
+                    <div style="flex:1;">
+                        <div style="font-weight:800; font-size:14px; color:var(--text-title);">${Utils.escHtml(sub.name)}</div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${sub.cycle === 'monthly' ? '매월' : '매년'} 결제</div>
+                    </div>
+                    <div style="flex:1; text-align:right; margin-right:15px;">
+                        <div style="font-weight:900; font-size:15px; color:var(--color-expense); font-variant-numeric: tabular-nums;">${sub.amount.toLocaleString()}원</div>
+                        <div style="font-size:10px; color:var(--color-warning);">연 환산: ${Math.floor(yearlyEquivalent).toLocaleString()}원</div>
+                    </div>
+                    <div>
+                        <button class="util-btn btn-gray" onclick="AppCtrl.deleteSubscription('${sub.id}')">삭제</button>
+                    </div>
+                </li>`;
+            });
+
+            if (DataStore.state.subscriptions.length === 0) {
+                html = '<li style="justify-content:center; color:var(--text-muted); font-size:12px; border:none;">등록된 구독 서비스가 없습니다.</li>';
+            }
+
+            listEl.innerHTML = html;
+            document.getElementById('subMonthlyTotal').innerText = Math.floor(totalMonthly).toLocaleString();
+            document.getElementById('subYearlyTotal').innerText = Math.floor(totalYearly).toLocaleString();
+        },
+
         renderStockModule() {
             const tbody = document.getElementById('stockTableBody');
             const accountFilter = document.getElementById('stockAccountFilter');
@@ -1016,16 +1105,16 @@
                     <td>${Utils.escHtml(rec.month)}</td>
                     <td class="text-blue" style="text-align:right;"><span class="num-wrap">${deposit > 0 ? deposit.toLocaleString() : '-'}</span></td>
                     <td class="text-red" style="text-align:right;"><span class="num-wrap">${withdrawal > 0 ? withdrawal.toLocaleString() : '-'}</span></td>
-                    <td style="text-align:right; font-weight:bold;"><span class="num-wrap">${endingBalance.toLocaleString()}</span></td>
+                    <td style="text-align:right; font-weight:900;"><span class="num-wrap">${endingBalance.toLocaleString()}</span></td>
                     <td style="text-align:right; color:${returnColor};"><span class="num-wrap">${monthlyProfit > 0 ? '+' : ''}${monthlyProfit.toLocaleString()}</span></td>
-                    <td style="text-align:center; color:${returnColor}; font-weight:bold;">${returnSign}${monthlyReturn.toFixed(2)}%</td>
-                    <td style="text-align:center; color:${cumReturnColor}; font-weight:bold;">${cumReturnSign}${cumulativeReturn.toFixed(2)}%</td>
-                    <td><button class="util-btn btn-del" onclick="AppCtrl.deleteStockRecord('${rec.id}')">삭제</button></td>
+                    <td style="text-align:center; color:${returnColor}; font-weight:800;">${returnSign}${monthlyReturn.toFixed(2)}%</td>
+                    <td style="text-align:center; color:${cumReturnColor}; font-weight:900;">${cumReturnSign}${cumulativeReturn.toFixed(2)}%</td>
+                    <td><button class="util-btn btn-gray" onclick="AppCtrl.deleteStockRecord('${rec.id}')">삭제</button></td>
                 </tr>` + html;
             });
 
             if (records.length === 0) {
-                html = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">[${Utils.escHtml(this.currentStockAccount)}] 기록이 없습니다.</td></tr>`;
+                html = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); border:none;">[${Utils.escHtml(this.currentStockAccount)}] 기록이 없습니다.</td></tr>`;
             }
             tbody.innerHTML = html;
 
@@ -1058,8 +1147,8 @@
                             label: '누적 수익률 (%)',
                             data: cumReturnData,
                             type: 'line',
-                            borderColor: '#8e44ad',
-                            backgroundColor: '#8e44ad',
+                            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),
+                            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),
                             borderWidth: 2,
                             tension: 0.1,
                             yAxisID: 'y-return'
@@ -1068,7 +1157,8 @@
                             label: '월별 순손익 (원)',
                             data: profitData,
                             type: 'bar',
-                            backgroundColor: profitData.map(val => val >= 0 ? 'rgba(41, 128, 185, 0.6)' : 'rgba(192, 57, 43, 0.6)'),
+                            backgroundColor: profitData.map(val => val >= 0 ? 'rgba(9, 132, 227, 0.5)' : 'rgba(214, 48, 49, 0.5)'),
+                            borderRadius: 4,
                             yAxisID: 'y-profit'
                         }
                     ]
@@ -1076,34 +1166,21 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
+                    interaction: { mode: 'index', intersect: false },
                     scales: {
-                        x: { display: true },
+                        x: { display: true, grid: { display: false } },
                         'y-profit': {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
+                            type: 'linear', display: true, position: 'left',
                             grid: { drawOnChartArea: false },
-                            ticks: {
-                                callback: function(value) {
-                                    if(value === 0) return 0;
-                                    return (value / 10000).toFixed(0) + '만'; 
-                                }
-                            }
+                            ticks: { callback: function(value) { if(value === 0) return 0; return (value / 10000).toFixed(0) + '만'; } }
                         },
                         'y-return': {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
+                            type: 'linear', display: true, position: 'right',
+                            grid: { color: 'rgba(0,0,0,0.05)' },
                             ticks: { callback: function(value) { return value + '%'; } }
                         }
                     },
-                    plugins: {
-                        legend: { position: 'top', labels: { font: { size: 10 } } }
-                    }
+                    plugins: { legend: { position: 'top', labels: { font: { size: 10, family: "'Pretendard Variable', sans-serif" } } } }
                 }
             });
         },
@@ -1114,7 +1191,7 @@
             const searchInput = document.getElementById('searchInput'); const isSearchActive = searchInput && searchInput.value.trim().length > 0;
 
             if (yearStr === 'all' || monthStr === 'all' || isSearchActive) {
-                calDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px; margin: 15px 0;">특정 연도와 월을 선택해야 볼 수 있습니다.</p>'; return;
+                calDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px; margin: 20px 0;">연도와 월을 선택하십시오.</p>'; return;
             }
 
             const year = parseInt(yearStr); const month = parseInt(monthStr);
@@ -1132,7 +1209,10 @@
             });
 
             let html = '<div class="calendar-grid">';
-            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => html += `<div class="cal-header">${d}</div>`);
+            ['일', '월', '화', '수', '목', '금', '토'].forEach((d, i) => {
+                let color = i === 0 ? 'var(--color-expense)' : (i === 6 ? 'var(--color-income)' : 'var(--text-muted)');
+                html += `<div class="cal-header" style="color: ${color};">${d}</div>`;
+            });
             let currentDay = 1; let nextMonthDay = 1;
             for (let i = 0; i < 42; i++) {
                 if (i < firstDay) html += `<div class="cal-day"><span class="cal-date other-month">${prevLastDate - firstDay + i + 1}</span></div>`;
@@ -1154,18 +1234,13 @@
         renderChart(filteredEntries, periodLabel, isSearchActive) {
             if (typeof Chart === 'undefined') {
                 const emptyEl = document.getElementById('expenseChartEmpty');
-                if (emptyEl) {
-                    emptyEl.innerText = "차트 라이브러리 연결 안됨";
-                    emptyEl.style.display = 'block';
-                }
+                if (emptyEl) { emptyEl.innerText = "차트 라이브러리 연결 안됨"; emptyEl.style.display = 'block'; }
                 const canvasEl = document.getElementById('expenseChartCanvas');
                 if (canvasEl) canvasEl.style.display = 'none';
                 return;
             }
 
             const chartType = document.getElementById('chartTypeSelect').value;
-            document.getElementById('chartTitle').innerText = `${periodLabel} ${chartType === 'income' ? '수입' : (chartType === 'all' ? '통합' : '지출')} 통계`;
-
             let totalAmount = 0; const dataByDesc = {};
             filteredEntries.forEach(e => {
                 if (!e.exclude && (isSearchActive || !e.excludeStatsOnly)) {
@@ -1180,30 +1255,23 @@
                 }
             });
 
-            if (this.expenseChartObj) {
-                this.expenseChartObj.destroy();
-            }
-
+            if (this.expenseChartObj) this.expenseChartObj.destroy();
             const canvasEl = document.getElementById('expenseChartCanvas');
             const emptyEl = document.getElementById('expenseChartEmpty');
 
             if (totalAmount === 0) {
-                canvasEl.style.display = 'none';
-                emptyEl.style.display = 'block';
-                return;
+                canvasEl.style.display = 'none'; emptyEl.style.display = 'block'; return;
             } else {
-                canvasEl.style.display = 'block';
-                emptyEl.style.display = 'none';
+                canvasEl.style.display = 'block'; emptyEl.style.display = 'none';
             }
 
             const sortedDescs = Object.keys(dataByDesc).sort((a, b) => dataByDesc[b] - dataByDesc[a]);
             const chartData = sortedDescs.map(desc => dataByDesc[desc]);
             
-            const expensePalette = ['#e74c3c', '#f39c12', '#d35400', '#8e44ad', '#c0392b', '#bdc3c7', '#ff9ff3', '#f368e0', '#ff7f50', '#fdcb6e', '#e55039'];
-            const incomePalette = ['#3498db', '#2ecc71', '#1abc9c', '#2980b9', '#27ae60', '#16a085', '#00cec9', '#0984e3', '#74b9ff', '#55efc4', '#81ecec'];
+            const expensePalette = ['#d63031', '#e17055', '#e84393', '#fdcb6e', '#ff7675', '#fab1a0', '#fd79a8', '#ffeaa7'];
+            const incomePalette = ['#0984e3', '#00b894', '#00cec9', '#74b9ff', '#55efc4', '#81ecec', '#6c5ce7', '#a29bfe'];
             
             let incCount = 0; let expCount = 0;
-            
             const backgroundColors = sortedDescs.map((desc) => {
                 if (chartType === 'income') return incomePalette[incCount++ % incomePalette.length];
                 if (chartType === 'expense') return expensePalette[expCount++ % expensePalette.length];
@@ -1218,19 +1286,16 @@
                     datasets: [{
                         data: chartData,
                         backgroundColor: backgroundColors,
-                        borderWidth: 1,
-                        borderColor: '#ffffff'
+                        borderWidth: 2,
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-box').trim()
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
                     plugins: {
-                        legend: { 
-                            position: 'right',
-                            labels: { font: { size: 10, family: "'Pretendard Variable', sans-serif" }, boxWidth: 12 }
-                        },
+                        legend: { position: 'right', labels: { font: { size: 11, family: "'Pretendard Variable', sans-serif" }, boxWidth: 10, usePointStyle: true, padding: 15, color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() } },
                         tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)', padding: 10,
                             callbacks: {
                                 label: function(context) {
                                     let label = context.label || '';
@@ -1249,20 +1314,79 @@
             });
         },
 
+        // [개선] 연도 결산 리포트 메인 렌더링 동기화
+        renderYearlySettlement() {
+            let yearStr = document.getElementById('yearFilter').value;
+            if (yearStr === 'all') yearStr = new Date().getFullYear().toString(); 
+            this.currentSettlementYear = parseInt(yearStr);
+
+            let yInc = 0; let yExp = 0; const mData = {};
+            for(let i=1; i<=12; i++) mData[String(i).padStart(2, '0')] = { income: 0, expense: 0 };
+
+            DataStore.state.entries.forEach(e => {
+                if (!e.exclude && !e.excludeStatsOnly && e.date?.startsWith(yearStr)) {
+                    const m = e.date.substring(5, 7);
+                    if(mData[m]) { mData[m].income += (e.income || 0); mData[m].expense += (e.expense || 0); yInc += (e.income || 0); yExp += (e.expense || 0); }
+                }
+            });
+
+            let maxV = 0; for(let i=1; i<=12; i++) { const m = String(i).padStart(2, '0'); maxV = Math.max(maxV, mData[m].income, mData[m].expense); }
+
+            let tbHtml = ''; let chHtml = '';
+            for(let i=1; i<=12; i++) {
+                const m = String(i).padStart(2, '0'); const inc = mData[m].income; const exp = mData[m].expense; const net = inc - exp;
+                tbHtml += `<tr><td><strong>${i}월</strong></td><td class="text-blue" style="text-align:right;"><span class="num-wrap">${inc.toLocaleString()}</span></td><td class="text-red" style="text-align:right;"><span class="num-wrap">${exp.toLocaleString()}</span></td><td style="color:${net > 0 ? 'var(--color-income)' : (net < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; font-weight:800; text-align:right;"><span class="num-wrap">${net > 0 ? '+' : ''}${net.toLocaleString()}</span></td></tr>`;
+                
+                let hInc = maxV === 0 ? 0 : (inc/maxV)*100;
+                let hExp = maxV === 0 ? 0 : (exp/maxV)*100;
+                chHtml += `<div class="settlement-bar-group"><div class="settlement-bars"><div class="settlement-bar-inc" style="height:${hInc}%;" title="수입: ${inc.toLocaleString()}원"></div><div class="settlement-bar-exp" style="height:${hExp}%;" title="지출: ${exp.toLocaleString()}원"></div></div><div class="settlement-month-label">${i}월</div></div>`;
+            }
+            const yNet = yInc - yExp;
+            tbHtml += `<tr style="background-color: var(--bg-highlight); font-weight: 800; border-top: 2px solid var(--border-main);"><td>연 누적</td><td class="text-blue" style="text-align:right;"><span class="num-wrap">${yInc.toLocaleString()}</span></td><td class="text-red" style="text-align:right;"><span class="num-wrap">${yExp.toLocaleString()}</span></td><td style="color:${yNet > 0 ? 'var(--color-income)' : (yNet < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; text-align:right;"><span class="num-wrap">${yNet > 0 ? '+' : ''}${yNet.toLocaleString()}</span></td></tr>`;
+
+            const tbody = document.getElementById('settlementTbody');
+            if(tbody) tbody.innerHTML = tbHtml;
+            
+            const label = document.getElementById('settlementYearLabel');
+            if(label) label.innerText = yearStr;
+            
+            const chartCont = document.getElementById('settlementChartContainer');
+            if(chartCont) chartCont.innerHTML = chHtml;
+        },
+
+        // [개선] 연도 결산 화면에서 이전/다음 연도 클릭 시 글로벌 필터 동기화
+        changeGlobalYear(direction) {
+            const ys = document.getElementById('yearFilter');
+            let currentYear = parseInt(ys.value);
+            if (isNaN(currentYear)) currentYear = new Date().getFullYear();
+            
+            let targetYear = currentYear + direction;
+            let exists = Array.from(ys.options).some(o => parseInt(o.value) === targetYear);
+            if (exists) {
+                ys.value = targetYear.toString();
+                this.syncDateInputWithFilter();
+                this.render();
+            }
+        },
+
         render() {
             try { this.calculateAndRenderAssets(); } catch(e) { console.error("Asset Error:", e); }
             try { this.renderDebtSimulator(); } catch(e) { console.error("Debt Sim Error:", e); }
             try { this.renderStockModule(); } catch(e) { console.error("Stock Module Error:", e); }
+            try { this.renderSubscriptionModule(); } catch(e) { console.error("Subscription Module Error:", e); }
             try { this.updateDescDatalist(); } catch(e) { console.error("Datalist Error:", e); }
             try { this.syncMonthlyMemoUI(); } catch(e) { console.error("Memo Error:", e); }
             try { this.renderCalendar(); } catch(e) { console.error("Calendar Error:", e); }
+            
+            // [개선] 연도 결산 리포트도 메인 렌더링에 동기화
+            try { this.renderYearlySettlement(); } catch(e) { console.error("Yearly Stats Error:", e); }
 
             const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
             const searchInput = document.getElementById('searchInput'); const sKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
             const isSearchActive = sKeyword.length > 0;
 
             const thead = document.getElementById('tableHead');
-            let headHtml = `<tr><th>일자</th><th>분류</th><th>내용</th><th>수입</th><th>지출</th><th style="text-align: right; padding-right: 15px;">${(!isSearchActive && yf !== 'all') ? yf.slice(-2)+'년 잔액' : '잔액'}</th><th>비고</th>`;
+            let headHtml = `<tr><th>일자</th><th>분류</th><th>내용</th><th style="text-align:right;">수입</th><th style="text-align:right;">지출</th><th style="text-align: right; padding-right: 15px;">잔액</th><th>비고</th>`;
             DataStore.state.customCols.forEach(col => { headHtml += `<th>${Utils.escHtml(col.name)}</th>`; });
             headHtml += `<th>관리</th></tr>`; thead.innerHTML = headHtml;
 
@@ -1276,7 +1400,6 @@
             if(document.getElementById('periodLabelInc')) document.getElementById('periodLabelInc').innerText = pLabel;
             if(document.getElementById('periodLabelExp')) document.getElementById('periodLabelExp').innerText = pLabel;
             if(document.getElementById('periodLabelNet')) document.getElementById('periodLabelNet').innerText = pLabel;
-            if(document.getElementById('carryBox')) document.getElementById('carryBox').style.display = isSearchActive ? 'none' : 'block';
 
             let filterStartDate = (!isSearchActive && yf !== 'all' && mf !== 'all') ? `${yf}-${mf.padStart(2, '0')}-01` : null;
             let yearStart = (!isSearchActive && yf !== 'all') ? `${yf}-01-01` : '0000-00-00';
@@ -1296,7 +1419,7 @@
 
             let tbodyContent = '';
             if (!isSearchActive && filterStartDate) {
-                let cH = `<tr class="carried-row"><td>-</td><td>-</td><td>${cLabel}</td><td style="text-align:center;"><span class="num-wrap">-</span></td><td style="text-align:center;"><span class="num-wrap">-</span></td><td class="text-blue" style="text-align:right; padding-right:15px;"><span style="font-weight:bold; font-variant-numeric: tabular-nums;">${carriedBalance.toLocaleString()}</span></td><td>-</td>`;
+                let cH = `<tr class="carried-row"><td>-</td><td>-</td><td><strong style="color:var(--text-muted);">${cLabel}</strong></td><td style="text-align:right;">-</td><td style="text-align:right;">-</td><td class="text-blue" style="text-align:right; padding-right:15px;"><span style="font-weight:900; font-variant-numeric: tabular-nums;">${carriedBalance.toLocaleString()}</span></td><td>-</td>`;
                 DataStore.state.customCols.forEach(() => cH += `<td>-</td>`); cH += `<td>-</td></tr>`; tbodyContent += cH;
             }
 
@@ -1311,29 +1434,29 @@
 
                 let tLabel = entry.type === 'transfer' ? '이체/상환' : (inc > 0 ? '수입' : '지출');
                 let lText = '';
-                const a1 = DataStore.state.assets.find(a => a.id === entry.linkedAsset1); if (a1) lText += `<span style="font-size:10px; color:${entry.linkedAssetOp1 === '+' ? 'var(--color-income)' : 'var(--color-expense)'};">[${Utils.escHtml(a1.name)}${Utils.escHtml(entry.linkedAssetOp1)}]</span><br>`;
-                const a2 = DataStore.state.assets.find(a => a.id === entry.linkedAsset2); if (a2) lText += `<span style="font-size:10px; color:${entry.linkedAssetOp2 === '+' ? 'var(--color-income)' : 'var(--color-expense)'};">[${Utils.escHtml(a2.name)}${Utils.escHtml(entry.linkedAssetOp2)}]</span>`;
-                if (lText) tLabel += `<br>${lText}`;
+                const a1 = DataStore.state.assets.find(a => a.id === entry.linkedAsset1); if (a1) lText += `<span style="font-size:9px; color:${entry.linkedAssetOp1 === '+' ? 'var(--color-income)' : 'var(--color-expense)'}; display:block; line-height:1;">[${Utils.escHtml(a1.name)}${Utils.escHtml(entry.linkedAssetOp1)}]</span>`;
+                const a2 = DataStore.state.assets.find(a => a.id === entry.linkedAsset2); if (a2) lText += `<span style="font-size:9px; color:${entry.linkedAssetOp2 === '+' ? 'var(--color-income)' : 'var(--color-expense)'}; display:block; line-height:1;">[${Utils.escHtml(a2.name)}${Utils.escHtml(entry.linkedAssetOp2)}]</span>`;
+                if (lText) tLabel += `<div style="margin-top:2px;">${lText}</div>`;
 
-                const rStyle = entry.exclude ? 'color: var(--text-muted);' : '';
+                const rStyle = entry.exclude ? 'color: var(--text-muted); opacity: 0.5;' : '';
                 const tClass = entry.exclude ? 'class="excluded-row"' : '';
                 let incTxt = inc > 0 ? inc.toLocaleString() : ''; let expTxt = exp > 0 ? exp.toLocaleString() : '';
-                if (entry.type === 'transfer') { incTxt = `<span style="color:var(--text-muted); font-size:11px;">(이체)</span>`; expTxt = `<span style="color:var(--text-muted); font-weight:bold;">${tAmt.toLocaleString()}</span>`; }
+                if (entry.type === 'transfer') { incTxt = `<span style="color:var(--text-muted); font-size:10px;">(이체)</span>`; expTxt = `<span style="color:var(--text-muted); font-weight:800;">${tAmt.toLocaleString()}</span>`; }
                 
-                let badge = entry.exclude ? `<span class="excluded-badge">완전제외</span>` : (entry.excludeStatsOnly ? `<span class="excluded-badge" style="background:#f39c12;">통계제외</span>` : '');
+                let badge = entry.exclude ? `<span class="badge">완전제외</span>` : (entry.excludeStatsOnly ? `<span class="badge" style="background:var(--color-warning); color:white;">통계제외</span>` : '');
                 let mIcon = entry.memo ? ` <span title="${Utils.escHtml(entry.memo)}" style="cursor:help;">📝</span>` : '';
                 
-                let rHtml = `<td style="${rStyle}">${Utils.escHtml((entry.date||'').slice(2))}</td><td style="${rStyle}">${tLabel}${badge}</td><td style="${rStyle}">${Utils.escHtml(entry.desc || '')}</td><td class="${entry.exclude ? '' : 'text-blue'}" style="text-align:center; ${rStyle}"><span class="num-wrap">${incTxt}</span></td><td class="${entry.exclude ? '' : 'text-red'}" style="text-align:center; ${rStyle}"><span class="num-wrap">${expTxt}</span></td><td style="text-align:right; padding-right:15px; ${rStyle}"><span style="font-weight:bold; font-variant-numeric: tabular-nums;">${dispBal.toLocaleString()}</span></td><td style="${rStyle}">${Utils.escHtml(entry.note || '')}${mIcon}</td>`;
+                let rHtml = `<td style="${rStyle} font-size:11px;">${Utils.escHtml((entry.date||'').slice(2))}</td><td style="${rStyle}">${tLabel}${badge}</td><td style="${rStyle} font-weight:bold; color:var(--text-title);">${Utils.escHtml(entry.desc || '')}</td><td class="${entry.exclude ? '' : 'text-blue'}" style="text-align:right; ${rStyle}"><span class="num-wrap">${incTxt}</span></td><td class="${entry.exclude ? '' : 'text-red'}" style="text-align:right; ${rStyle}"><span class="num-wrap">${expTxt}</span></td><td style="text-align:right; padding-right:15px; ${rStyle}"><span style="font-weight:900; font-variant-numeric: tabular-nums; color:var(--text-title);">${dispBal.toLocaleString()}</span></td><td style="${rStyle}">${Utils.escHtml(entry.note || '')}${mIcon}</td>`;
                 DataStore.state.customCols.forEach(col => rHtml += `<td style="${rStyle}">${Utils.escHtml(entry.customData?.[col.id] || '')}</td>`);
-                rHtml += `<td style="white-space: nowrap;"><button class="util-btn btn-edit" onclick="AppCtrl.editEntry('${Utils.escHtml(entry.id)}')">수정</button> <button class="util-btn btn-del" onclick="AppCtrl.deleteEntry('${Utils.escHtml(entry.id)}')">삭제</button></td>`;
+                rHtml += `<td><button class="util-btn btn-gray" style="margin-bottom:2px;" onclick="AppCtrl.editEntry('${Utils.escHtml(entry.id)}')">수정</button> <button class="util-btn btn-del" onclick="AppCtrl.deleteEntry('${Utils.escHtml(entry.id)}')">삭제</button></td>`;
                 tbodyContent += `<tr ${tClass}>${rHtml}</tr>`;
             });
 
-            if(filteredEntries.length === 0) tbodyContent += `<tr><td colspan="${8 + DataStore.state.customCols.length}" style="text-align:center;">내역이 없습니다.</td></tr>`;
+            if(filteredEntries.length === 0) tbodyContent += `<tr><td colspan="${8 + DataStore.state.customCols.length}" style="text-align:center; padding: 30px; color:var(--text-muted); border:none;">해당 기간에 기록된 내역이 없습니다.</td></tr>`;
             document.getElementById('tableBody').innerHTML = tbodyContent;
 
             const pNet = periodIncome - periodExpense; const nbEl = document.getElementById('sumNetBalance');
-            if(nbEl) { nbEl.innerText = pNet.toLocaleString(); nbEl.className = pNet > 0 ? 'text-blue' : (pNet < 0 ? 'text-red' : ''); }
+            if(nbEl) { nbEl.innerText = pNet.toLocaleString(); nbEl.className = 'value ' + (pNet > 0 ? 'text-blue' : (pNet < 0 ? 'text-red' : '')); }
             if(document.getElementById('carriedBalance')) document.getElementById('carriedBalance').innerText = carriedBalance.toLocaleString();
             if(document.getElementById('sumIncome')) document.getElementById('sumIncome').innerText = periodIncome.toLocaleString();
             if(document.getElementById('sumExpense')) document.getElementById('sumExpense').innerText = periodExpense.toLocaleString();
@@ -1342,43 +1465,13 @@
             try { this.renderChart(filteredEntries, pLabel, isSearchActive); } catch(e) { console.error("Chart Error:", e); }
         },
 
-        openYearlySettlement(targetYear) {
-            let year = targetYear || document.getElementById('yearFilter').value;
-            if (year === 'all') year = new Date().getFullYear().toString(); 
-            this.currentSettlementYear = parseInt(year);
-
-            let yInc = 0; let yExp = 0; const mData = {};
-            for(let i=1; i<=12; i++) mData[String(i).padStart(2, '0')] = { income: 0, expense: 0 };
-
-            DataStore.state.entries.forEach(e => {
-                if (!e.exclude && !e.excludeStatsOnly && e.date?.startsWith(year.toString())) {
-                    const m = e.date.substring(5, 7);
-                    if(mData[m]) { mData[m].income += (e.income || 0); mData[m].expense += (e.expense || 0); yInc += (e.income || 0); yExp += (e.expense || 0); }
-                }
-            });
-
-            let maxV = 0; for(let i=1; i<=12; i++) { const m = String(i).padStart(2, '0'); maxV = Math.max(maxV, mData[m].income, mData[m].expense); }
-
-            let tbHtml = ''; let chHtml = '<div class="settlement-chart-container">';
-            for(let i=1; i<=12; i++) {
-                const m = String(i).padStart(2, '0'); const inc = mData[m].income; const exp = mData[m].expense; const net = inc - exp;
-                tbHtml += `<tr><td><strong>${i}월</strong></td><td class="text-blue" style="text-align:center;"><span class="num-wrap">${inc.toLocaleString()}</span></td><td class="text-red" style="text-align:center;"><span class="num-wrap">${exp.toLocaleString()}</span></td><td style="color:${net > 0 ? 'var(--color-income)' : (net < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; font-weight:bold; text-align:center;"><span class="num-wrap">${net > 0 ? '+' : ''}${net.toLocaleString()}</span></td></tr>`;
-                chHtml += `<div class="settlement-bar-group"><div class="settlement-bars"><div class="settlement-bar-inc" style="height:${maxV===0?0:(inc/maxV)*100}%;" title="수입: ${inc.toLocaleString()}원"></div><div class="settlement-bar-exp" style="height:${maxV===0?0:(exp/maxV)*100}%;" title="지출: ${exp.toLocaleString()}원"></div></div><div class="settlement-month-label">${i}월</div></div>`;
-            }
-            const yNet = yInc - yExp;
-            tbHtml += `<tr style="background-color: var(--bg-highlight); font-weight: bold; border-top: 1px solid var(--border-main);"><td>연간 누적</td><td class="text-blue" style="text-align:center;"><span class="num-wrap">${yInc.toLocaleString()}</span></td><td class="text-red" style="text-align:center;"><span class="num-wrap">${yExp.toLocaleString()}</span></td><td style="color:${yNet > 0 ? 'var(--color-income)' : (yNet < 0 ? 'var(--color-expense)' : 'var(--text-main)')}; text-align:center;"><span class="num-wrap">${yNet > 0 ? '+' : ''}${yNet.toLocaleString()}</span></td></tr>`;
-            chHtml += '</div>';
-
-            document.getElementById('settlementTbody').innerHTML = tbHtml; document.getElementById('settlementYearLabel').innerText = `${year}년 결산`;
-            document.getElementById('settlementChartContainer').innerHTML = chHtml; document.getElementById('settlementModal').style.display = 'block';
-        },
-        changeSettlementYear(direction) { if(this.currentSettlementYear) this.openYearlySettlement((this.currentSettlementYear + direction).toString()); },
-        closeYearlySettlement() { document.getElementById('settlementModal').style.display = 'none'; },
-        
         syncDateInputWithFilter() {
             const yf = document.getElementById('yearFilter').value; const mf = document.getElementById('monthFilter').value;
             const dateInput = document.getElementById('dateInput');
             if(dateInput && yf !== 'all' && mf !== 'all' && !dateInput.value.startsWith(`${yf}-${mf}`)) dateInput.value = `${yf}-${mf}-01`;
+            
+            if(mf === 'all') document.getElementById('monthSuffix').style.display = 'none';
+            else document.getElementById('monthSuffix').style.display = 'inline';
         },
         goToCurrentMonth() {
             const now = new Date(); document.getElementById('yearFilter').value = now.getFullYear(); document.getElementById('monthFilter').value = String(now.getMonth() + 1).padStart(2, '0');
@@ -1394,7 +1487,7 @@
                 else {
                     let m = parseInt(ms.value) + direction;
                     if (m > 12) { m = 1; y++; } else if (m < 1) { m = 12; y--; }
-                    if (!Array.from(ys.options).map(o => o.value).includes(y.toString())) { alert('범위 이탈'); return; }
+                    if (!Array.from(ys.options).map(o => o.value).includes(y.toString())) { return; }
                     ys.value = y; ms.value = String(m).padStart(2, '0');
                 }
             }
@@ -1402,13 +1495,11 @@
         }
     };
 
-    window.addEventListener('click', (e) => { if (e.target === document.getElementById('settlementModal')) UIManager.closeYearlySettlement(); });
-
     // ==========================================
     // 4. AppCtrl
     // ==========================================
     const AppCtrl = {
-        init() { DataStore.init(); UIManager.initFilters(); UIManager.renderAll(); this.checkRecurringTasks(); },
+        init() { DataStore.init(); UIManager.initFilters(); UIManager.renderAll(); this.checkRecurringTasks(); UIManager.syncDateInputWithFilter(); },
         
         saveMonthlyMemo() { UIManager.saveMonthlyMemo(); },
         
@@ -1417,6 +1508,40 @@
             DataStore.state.settings.debtTargetMonth = val;
             DataStore.save();
             UIManager.renderDebtSimulator();
+        },
+
+        addSubscription() {
+            const name = document.getElementById('newSubName').value.trim();
+            const amount = parseInt(document.getElementById('newSubAmount').value) || 0;
+            const cycle = document.getElementById('newSubCycle').value;
+
+            if (!name || amount <= 0) {
+                alert('구독명과 결제 금액을 정확히 입력하십시오.');
+                return;
+            }
+
+            DataStore.state.subscriptions.push({
+                id: 'sub_' + Utils.generateID(),
+                name,
+                amount,
+                cycle
+            });
+
+            DataStore.save();
+            DataStore.pushState();
+            UIManager.renderSubscriptionModule();
+
+            document.getElementById('newSubName').value = '';
+            document.getElementById('newSubAmount').value = '';
+        },
+
+        deleteSubscription(id) {
+            if (confirm('이 구독 항목을 삭제하시겠습니까?')) {
+                DataStore.state.subscriptions = DataStore.state.subscriptions.filter(s => s.id !== id);
+                DataStore.save();
+                DataStore.pushState();
+                UIManager.renderSubscriptionModule();
+            }
         },
 
         addStockAccount() {
@@ -1580,7 +1705,10 @@
             document.getElementById('repeatType').value = 'none'; UIManager.toggleRepeatDate();
             DataStore.state.customCols.forEach(col => { const inp = document.getElementById(`customInput_${col.id}`); if(inp) inp.value = e.customData?.[col.id] || ''; });
             document.getElementById('submitBtn').innerText = '단일 수정 완료'; document.getElementById('cancelEditBtn').style.display = 'inline-flex';
-            document.getElementById('inputFormContainer').style.display = 'block'; document.getElementById('inputToggleIcon').innerText = '▲'; document.getElementById('inputFormContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // 편집 시 자동으로 입력 폼 화면으로 스크롤 이동
+            UIManager.switchTab('tab-ledger');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         },
         cancelEdit() { UIManager.currentEditId = null; document.getElementById('submitBtn').innerText = '내역 등록'; document.getElementById('cancelEditBtn').style.display = 'none'; UIManager.clearInputs(); },
         deleteEntry(id) { if(confirm('삭제하시겠습니까?')) { if(UIManager.currentEditId === id) this.cancelEdit(); DataStore.state.entries = DataStore.state.entries.filter(e => e.id !== id); DataStore.save(); DataStore.pushState(); UIManager.render(); } },
@@ -1655,6 +1783,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
+                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -1773,7 +1902,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 다운로드 폴더에 저장되었습니다.\n(향후 복원 시 이 파일을 선택하십시오)`);
+                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.\n(향후 복원 시 이 파일을 선택하십시오)`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
@@ -1793,6 +1922,7 @@
                         const _recurring = Array.isArray(rData.recurringTasks) ? rData.recurringTasks : [];
                         const _stocks = Array.isArray(rData.stockRecords) ? rData.stockRecords : [];
                         const _stockAcc = Array.isArray(rData.stockAccounts) ? rData.stockAccounts : [];
+                        const _subscriptions = Array.isArray(rData.subscriptions) ? rData.subscriptions : [];
                         const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
                         const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
                         
@@ -1802,6 +1932,7 @@
                         localStorage.setItem('accountRecurring_v2', JSON.stringify(_recurring));
                         localStorage.setItem('accountStocks', JSON.stringify(_stocks));
                         localStorage.setItem('accountStockAccounts', JSON.stringify(_stockAcc));
+                        localStorage.setItem('accountSubscriptions', JSON.stringify(_subscriptions));
                         localStorage.setItem('accountMonthlyMemos', JSON.stringify(_memos));
                         localStorage.setItem('accountSettings', JSON.stringify(_settings));
                         
