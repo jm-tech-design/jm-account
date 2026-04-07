@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jm-account-book-v7';
+const CACHE_NAME = 'jm-account-book-v8';
 const urlsToCache = [
   './',
   './manifest.json',
