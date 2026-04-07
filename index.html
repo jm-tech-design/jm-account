@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* === 미니멀리즘 테마 색상 변수 === */
         :root {
             --bg-main: #f0f2f5; --bg-box: #ffffff; --bg-sub: #fafbfc; --bg-input: #f9f9fa;
             --text-main: #2d3436; --text-title: #1e272e; 
@@ -303,7 +304,6 @@
             </div>
         </div>
 
-
         <div id="tab-stats" class="tab-content">
             <div class="box">
                 <div class="box-title">
@@ -338,7 +338,6 @@
                 </div>
             </div>
         </div>
-
 
         <div id="tab-assets" class="tab-content">
             
@@ -479,7 +478,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v5.0 (Secure Edition)<br>
+                통합 자산 가계부 System v5.1 (Secure Edition)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -501,9 +500,6 @@
         </div>
     </div>
 </div> <script>
-    // ==========================================
-    // 1. Utilities
-    // ==========================================
     const Utils = {
         escHtml: (str) => {
             if (str === null || str === undefined) return '';
@@ -522,7 +518,7 @@
     };
 
     // ==========================================
-    // [신규] 2. CryptoVault (군사급 암호화 모듈)
+    // 2. CryptoVault (군사급 암호화 모듈)
     // ==========================================
     const CryptoVault = {
         async getDerivationParams(salt) {
@@ -590,7 +586,7 @@
     };
 
     // ==========================================
-    // 3. DataStore (암호화 대응 비동기 아키텍처)
+    // 3. DataStore 
     // ==========================================
     const DataStore = {
         state: { entries: [], customCols: [], assets: [], recurringTasks: [], monthlyMemos: {}, settings: {}, stockRecords: [], stockAccounts: [], subscriptions: [] },
@@ -607,7 +603,6 @@
             }
         },
 
-        // [변경] 평문 데이터만 로드하도록 분리 (암호화된 경우 이 데이터를 덮어씌움)
         initPlaintext() {
             this.state.entries = this.safeParse('accountBook_v2', []);
             this.state.customCols = this.safeParse('accountCols', []);
@@ -657,13 +652,12 @@
                     }
                 });
 
-                if (changed) this.save(); // 비동기이지만 UI 렌더링에 영향 없음
+                if (changed) this.save(); 
             } catch (e) {
                 console.error("마이그레이션 오류 발생:", e);
             }
         },
 
-        // [변경] 비동기 데이터 저장 로직 (AES 암호화 분기 처리)
         async save() {
             try {
                 const optimizedEntries = this.state.entries.map(e => {
@@ -693,15 +687,12 @@
                 };
 
                 if (this.isEncrypted && AuthCtrl.currentPin) {
-                    // 암호화 모드: 전체 상태를 암호화 캡슐로 압축
                     const encryptedBase64 = await CryptoVault.encrypt(stateToSave, AuthCtrl.currentPin);
                     localStorage.setItem('jm_secure_vault', encryptedBase64);
                     
-                    // 평문 데이터 완벽 파괴 (Wipe)
                     const keysToWipe = ['accountBook_v2', 'accountAssets', 'accountCols', 'accountRecurring_v2', 'accountMonthlyMemos', 'accountSettings', 'accountStocks', 'accountStockAccounts', 'accountSubscriptions'];
                     keysToWipe.forEach(k => localStorage.removeItem(k));
                 } else {
-                    // 평문 모드
                     localStorage.setItem('accountBook_v2', JSON.stringify(stateToSave.entries));
                     localStorage.setItem('accountAssets', JSON.stringify(stateToSave.assets));
                     localStorage.setItem('accountCols', JSON.stringify(stateToSave.customCols));
@@ -712,7 +703,6 @@
                     localStorage.setItem('accountStockAccounts', JSON.stringify(stateToSave.stockAccounts));
                     localStorage.setItem('accountSubscriptions', JSON.stringify(stateToSave.subscriptions));
                     
-                    // 암호화 캡슐 파괴
                     localStorage.removeItem('jm_secure_vault');
                 }
             } catch (e) {
@@ -753,21 +743,20 @@
     };
 
     // ==========================================
-    // 4. AuthCtrl (보안 모듈 & 암호 해독기)
+    // 4. AuthCtrl
     // ==========================================
     const AuthCtrl = {
         mode: 'unlock', 
         tempPin: '',
         currentInput: '',
         currentPin: null,
-        legacyPin: null, // V1 마이그레이션용 임시 보관소
+        legacyPin: null, 
         
         async init() {
             const vault = localStorage.getItem('jm_secure_vault');
             const legacySettings = DataStore.safeParse('accountSettings', {});
             
             if (vault) {
-                // V2: AES 암호화 캡슐 발견
                 DataStore.isEncrypted = true;
                 const tempKey = sessionStorage.getItem('jm_temp_key');
                 const isSessionUnlocked = sessionStorage.getItem('jm_app_unlocked') === 'true';
@@ -777,7 +766,7 @@
                         const decryptedState = await CryptoVault.decrypt(vault, tempKey);
                         DataStore.state = decryptedState;
                         this.currentPin = tempKey;
-                        AppCtrl.onAppUnlocked(); // 잠금 해제 성공
+                        AppCtrl.onAppUnlocked(); 
                     } catch(e) {
                         sessionStorage.removeItem('jm_temp_key');
                         sessionStorage.removeItem('jm_app_unlocked');
@@ -787,7 +776,6 @@
                     this.showLockScreen('unlock');
                 }
             } else if (legacySettings.appPin) {
-                // V1: 과거 방식 평문 PIN 발견 (마이그레이션 대상)
                 DataStore.isEncrypted = false;
                 this.legacyPin = legacySettings.appPin;
                 
@@ -799,7 +787,6 @@
                     this.showLockScreen('unlock_legacy');
                 }
             } else {
-                // 잠금 없음
                 DataStore.isEncrypted = false;
                 AppCtrl.onAppUnlocked();
             }
@@ -831,7 +818,6 @@
             }
         },
         
-        // 올바른 번호가 입력되면 호출
         async processPin() {
             const val = this.currentInput;
             
@@ -864,7 +850,6 @@
                 if (val === this.tempPin) {
                     this.currentPin = val;
                     DataStore.isEncrypted = true;
-                    // V1 찌꺼기 삭제
                     if(DataStore.state.settings) delete DataStore.state.settings.appPin; 
                     await DataStore.save();
                     sessionStorage.setItem('jm_app_unlocked', 'true');
@@ -879,7 +864,7 @@
                 if (val === this.currentPin) {
                     this.currentPin = null;
                     DataStore.isEncrypted = false;
-                    await DataStore.save(); // 암호화 해제하여 저장
+                    await DataStore.save(); 
                     sessionStorage.removeItem('jm_app_unlocked');
                     sessionStorage.removeItem('jm_temp_key');
                     alert('보안 해제 완료: 이제 데이터가 평문으로 저장됩니다.');
@@ -894,7 +879,7 @@
         async executeMigration() {
             if(DataStore.state.settings) delete DataStore.state.settings.appPin;
             DataStore.isEncrypted = true;
-            await DataStore.save(); // 암호화 후 평문 삭제
+            await DataStore.save(); 
             alert('시스템 보안 업데이트 완료.\n당신의 데이터가 AES-256 규격으로 안전하게 암호화 마이그레이션 되었습니다.');
             AppCtrl.onAppUnlocked();
         },
@@ -1844,21 +1829,29 @@
     };
 
     // ==========================================
-    // 5. AppCtrl (메인 로직 및 연결부)
+    // 5. AppCtrl
     // ==========================================
     const AppCtrl = {
         init() { 
             DataStore.initPlaintext(); 
             UIManager.initFilters(); 
-            AuthCtrl.init(); // 여기서 잠금 확인 후 onAppUnlocked 호출
+            AuthCtrl.init(); 
         },
 
-        // [신규] 잠금 해제 직후 실행되는 부트 시퀀스
+        // [신규] 잠금 화면 해제 후 호출되는 앱 렌더링 부트 시퀀스
         onAppUnlocked() {
+            document.getElementById('lockScreen').style.display = 'none';
+            document.getElementById('appWrapper').style.display = 'block';
+            AuthCtrl.updateSettingsUI();
+
             DataStore.runMigration();
             DataStore.pushState();
             UIManager.syncDateInputWithFilter();
-            this.checkRecurringTasks(); 
+            this.checkRecurringTasks();
+
+            setTimeout(() => {
+                UIManager.renderAll();
+            }, 50);
         },
         
         saveMonthlyMemo() { UIManager.saveMonthlyMemo(); },
@@ -2252,7 +2245,6 @@
             
             const fileName = `가계부_통합백업_${Utils.getTodayString()}.txt`;
             
-            // [개선] 백업 데이터 생성 시, 암호화 상태면 암호화 캡슐만, 아니면 평문 JSON 생성
             let backupDataStr = '';
             if (DataStore.isEncrypted) {
                 backupDataStr = JSON.stringify({
@@ -2281,12 +2273,13 @@
             const file = event.target.files[0]; if (!file) return;
             if(!confirm('기존 데이터가 덮어씌워집니다. 진행하시겠습니까?')) { event.target.value = ''; return; }
             
+            const preservedPin = AuthCtrl.currentPin;
+
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const rData = JSON.parse(e.target.result);
                     
-                    // [신규] 암호화된 백업 파일 복원 로직
                     if (rData.is_secure_vault && rData.payload) {
                         const pin = prompt('이 백업 파일은 암호화되어 있습니다.\n백업 당시의 4자리 PIN 번호를 입력하세요:');
                         if (!pin) { alert('복원이 취소되었습니다.'); return; }
@@ -2306,7 +2299,6 @@
                             return;
                         }
                     } else {
-                        // 평문 백업 파일 복원
                         if (rData && typeof rData === 'object') {
                             const _entries = Array.isArray(rData.entries) ? rData.entries : (Array.isArray(rData) ? rData : []);
                             const _customCols = Array.isArray(rData.customCols) ? rData.customCols : [];
@@ -2318,13 +2310,19 @@
                             const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
                             const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
                             
+                            if (preservedPin && !DataStore.isEncrypted) {
+                                _settings.appPin = preservedPin;
+                            }
+                            
                             DataStore.state = {
                                 entries: _entries, customCols: _customCols, assets: _assets, recurringTasks: _recurring,
                                 stockRecords: _stocks, stockAccounts: _stockAcc, subscriptions: _subscriptions,
                                 monthlyMemos: _memos, settings: _settings
                             };
                             
-                            // 현재 기기의 암호화 상태를 유지하며 저장
+                            // [수정됨] 평문 복원 시 이전 암호화 캡슐 완전 파괴
+                            localStorage.removeItem('jm_secure_vault'); 
+                            
                             await DataStore.save();
                             alert('복원 완료. 페이지를 새로고침합니다.'); location.reload(); 
                         } else {
