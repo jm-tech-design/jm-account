@@ -21,7 +21,8 @@
             --text-main: #2d3436; --text-title: #1e272e; 
             --text-muted: #636e72; 
             --border-main: transparent; --border-input: #dfe6e9; --border-light: #f1f2f6;
-            --color-income: #0984e3; --color-expense: #d63031; --color-warning: #e17055; --color-primary: #6c5ce7;
+            --color-income: #0984e3; --color-expense: #d63031; --color-warning: #e17055; 
+            --color-primary: #6c5ce7;
             --bg-table-head: #f5f6fa; --text-table-head: #2d3436;
             --bg-highlight: #e3f2fd; --border-highlight: #74b9ff;
             --bg-carried: #fff9c4; --bg-excluded: #f5f6fa; --bg-chart: #dfe6e9;
@@ -36,11 +37,12 @@
                 --text-main: #e0e0e0; --text-title: #ffffff; 
                 --text-muted: #888888; 
                 --border-main: transparent; --border-input: #444444; --border-light: #333333;
-                --color-income: #74b9ff; --color-expense: #ff7675; --color-warning: #fab1a0; --color-primary: #a29bfe;
+                --color-income: #74b9ff; --color-expense: #ff7675; --color-warning: #fab1a0; 
+                --color-primary: #8c7ae6; /* 다크모드 시인성을 위해 채도 보정 */
                 --bg-table-head: #2d3436; --text-table-head: #e0e0e0;
                 --bg-highlight: #2c3e50; --border-highlight: #34495e;
                 --bg-carried: #3e3b22; --bg-excluded: #222222; --bg-chart: #444444;
-                --bg-main-card: #6c5ce7; --text-main-card: #ffffff; 
+                --bg-main-card: #8c7ae6; --text-main-card: #ffffff; 
                 --modal-overlay: rgba(0,0,0,0.8);
                 --shadow-sm: 0 2px 8px rgba(0,0,0,0.4); --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
             }
@@ -83,11 +85,9 @@
         .tab-icon { font-size: 20px; filter: grayscale(100%) opacity(0.5); transition: filter 0.2s; }
         .tab-item.active .tab-icon { filter: none; }
 
-        /* [개선] 스와이프를 위해 탭 전환 애니메이션 추가 (가로 슬라이딩) */
-        .container { max-width: 800px; margin: auto; padding: 15px; position: relative; overflow: hidden; }
+        .container { max-width: 800px; margin: auto; padding: 15px; position: relative; overflow-x: hidden; }
         .tab-content { display: none; animation: fadeIn 0.3s ease; width: 100%; }
         .tab-content.active { display: block; }
-        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .box { background: var(--bg-box); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: none; }
@@ -101,7 +101,7 @@
         .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } .btn-gray { background-color: #dfe6e9; color: #2d3436; }
         .flex-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; } .flex-1 { flex: 1; min-width: 120px; }
         
-        .bg-primary { background-color: var(--color-primary) !important; color: white !important;} 
+        .bg-primary { background-color: var(--color-primary) !important; color: #ffffff !important;} 
         .bg-blue { background-color: var(--color-income); } .bg-red { background-color: var(--color-expense); } 
         .bg-gray { background-color: var(--border-light); color: var(--text-main); }
         .bg-danger { background-color: var(--color-expense) !important; color: white !important;}
@@ -480,7 +480,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v5.2 (Secure Edition)<br>
+                통합 자산 가계부 System v5.3 (Secure Edition)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -949,7 +949,7 @@
     };
 
     // ==========================================
-    // 5. UIManager
+    // 5. UIManager (수정된 스와이프 로직 탑재)
     // ==========================================
     const UIManager = {
         currentEditId: null,
@@ -959,7 +959,7 @@
         stockChartObj: null, 
         searchTimeout: null,
         currentStockAccount: '기본 계좌', 
-
+        
         // [신규] 스와이프 제어 변수
         tabs: ['tab-ledger', 'tab-stats', 'tab-assets', 'tab-settings'],
         currentTabIndex: 0,
@@ -968,33 +968,11 @@
         touchStartY: 0,
         touchEndY: 0,
 
-        // [수정됨] 탭 전환 시 인덱스 동기화
-        switchTab(tabId, element) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
-            
-            const targetTab = document.getElementById(tabId);
-            targetTab.classList.add('active');
-            
-            // element가 주어지지 않은 경우(스와이프 등)를 위해 탭 아이콘 강제 활성화
-            if(!element) {
-                element = document.querySelector(`.tab-item[data-target="${tabId}"]`);
-            }
-            if(element) element.classList.add('active');
-            
-            // 현재 인덱스 동기화
-            this.currentTabIndex = this.tabs.indexOf(tabId);
-            
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-            if(tabId === 'tab-stats' && this.expenseChartObj) this.expenseChartObj.resize();
-            if(tabId === 'tab-assets' && this.stockChartObj) this.stockChartObj.resize();
-        },
-
-        // [신규] 터치 스와이프 이벤트 설정
+        // [신규] 터치 이벤트 리스너 이식
         initSwipeEngine() {
             const container = document.getElementById('swipeContainer');
-            
+            if (!container) return;
+
             container.addEventListener('touchstart', e => {
                 this.touchStartX = e.changedTouches[0].screenX;
                 this.touchStartY = e.changedTouches[0].screenY;
@@ -1007,24 +985,45 @@
             }, { passive: true });
         },
 
-        // [신규] 스와이프 판단 로직 (가로로 50px 이상 밀었을 때만 작동, 세로 스크롤 시 무시)
+        // [신규] 스와이프 방향 판단
         handleSwipe() {
             const xDiff = this.touchEndX - this.touchStartX;
             const yDiff = this.touchEndY - this.touchStartY;
-            
-            if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(yDiff)) {
+
+            // 상하 스크롤을 방해하지 않기 위해 좌우로만 60px 이상 확실히 밀었을 때 작동
+            if (Math.abs(xDiff) > 60 && Math.abs(xDiff) > Math.abs(yDiff)) {
                 if (xDiff > 0) {
-                    // Right swipe -> Previous tab
+                    // 오른쪽으로 넘김 -> 이전 탭
                     if (this.currentTabIndex > 0) {
                         this.switchTab(this.tabs[this.currentTabIndex - 1]);
                     }
                 } else {
-                    // Left swipe -> Next tab
+                    // 왼쪽으로 넘김 -> 다음 탭
                     if (this.currentTabIndex < this.tabs.length - 1) {
                         this.switchTab(this.tabs[this.currentTabIndex + 1]);
                     }
                 }
             }
+        },
+
+        switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            if(!element) {
+                element = document.querySelector(`.tab-item[data-target="${tabId}"]`);
+            }
+            if(element) element.classList.add('active');
+            
+            // 현재 탭 인덱스 동기화
+            this.currentTabIndex = this.tabs.indexOf(tabId);
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            if(tabId === 'tab-stats' && this.expenseChartObj) this.expenseChartObj.resize();
+            if(tabId === 'tab-assets' && this.stockChartObj) this.stockChartObj.resize();
         },
 
         debouncedRender() {
@@ -1887,16 +1886,17 @@
     };
 
     // ==========================================
-    // 7. AppCtrl (메인 로직 및 연결부)
+    // 6. AppCtrl (메인 로직 및 연결부)
     // ==========================================
     const AppCtrl = {
         init() { 
             DataStore.initPlaintext(); 
             UIManager.initFilters(); 
-            UIManager.initSwipeEngine(); // [신규] 스와이프 제스처 엔진 가동
+            UIManager.initSwipeEngine(); // 스와이프 감지기 가동
             AuthCtrl.init(); 
         },
 
+        // 잠금 화면 해제 후 호출되는 앱 렌더링 부트 시퀀스
         onAppUnlocked() {
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('appWrapper').style.display = 'block';
@@ -1968,10 +1968,6 @@
             UIManager.renderStockModule();
         },
 
-        deleteStockAccount() {
-            const current = UIManager.currentStockAccount;
-            if (current === '기본 계좌') { alert('기본 계좌는 삭제할 수 জ্ঞ```html
-        // ... (이전 코드 유지)
         deleteStockAccount() {
             const current = UIManager.currentStockAccount;
             if (current === '기본 계좌') { alert('기본 계좌는 삭제할 수 없습니다.'); return; }
