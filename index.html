@@ -83,9 +83,11 @@
         .tab-icon { font-size: 20px; filter: grayscale(100%) opacity(0.5); transition: filter 0.2s; }
         .tab-item.active .tab-icon { filter: none; }
 
-        .container { max-width: 800px; margin: auto; padding: 15px; }
-        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        /* [개선] 스와이프를 위해 탭 전환 애니메이션 추가 (가로 슬라이딩) */
+        .container { max-width: 800px; margin: auto; padding: 15px; position: relative; overflow: hidden; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; width: 100%; }
         .tab-content.active { display: block; }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .box { background: var(--bg-box); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: none; }
@@ -209,8 +211,8 @@
         <button class="btn-today" style="position: absolute; right: 15px;" onclick="UIManager.goToCurrentMonth()">오늘</button>
     </div>
 
-    <div class="container">
-        <div id="tab-ledger" class="tab-content active">
+    <div class="container" id="swipeContainer">
+        <div id="tab-ledger" class="tab-content active" data-tab-index="0">
             
             <div class="summary-grid">
                 <div class="summary-card main">
@@ -304,7 +306,8 @@
             </div>
         </div>
 
-        <div id="tab-stats" class="tab-content">
+
+        <div id="tab-stats" class="tab-content" data-tab-index="1">
             <div class="box">
                 <div class="box-title">
                     <span id="chartTitle">📊 월 통계</span>
@@ -339,7 +342,7 @@
             </div>
         </div>
 
-        <div id="tab-assets" class="tab-content">
+        <div id="tab-assets" class="tab-content" data-tab-index="2">
             
             <div class="box">
                 <div class="box-title"><span>🏦 현금 및 부채 현황</span> <span style="font-size: 16px; font-weight: 900; color: var(--color-primary);" id="totalNetWorth">0 원</span></div>
@@ -440,13 +443,12 @@
             </div>
         </div>
 
-
-        <div id="tab-settings" class="tab-content">
+        <div id="tab-settings" class="tab-content" data-tab-index="3">
             
             <div class="box">
                 <div class="box-title">🔒 앱 잠금 (보안)</div>
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">
-                    <strong>[강력 보안 활성화]</strong> 4자리 PIN 번호를 설정하면, 브라우저 내의 모든 자산 데이터가 미국 정부 표준인 <strong>AES-256-GCM 알고리즘으로 심층 암호화</strong>되어 보관됩니다. PIN 번호를 잊어버리면 그 누구도 데이터를 복구할 수 없습니다.
+                    <strong>[강력 보안 활성화]</strong> 4자리 PIN 번호를 설정하면, 브라우저 내의 모든 자산 데이터가 <strong>AES-256-GCM 알고리즘으로 심층 암호화</strong>되어 보관됩니다.
                 </p>
                 <div class="flex-row mobile-row" style="margin-bottom: 0;">
                     <button id="pinToggleBtn" class="std-btn bg-primary flex-1 btn-fixed" onclick="AuthCtrl.startSetup()">PIN 비밀번호 및 암호화 설정</button>
@@ -478,24 +480,24 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v5.1 (Secure Edition)<br>
+                통합 자산 가계부 System v5.2 (Secure Edition)<br>
                 Designed by JM Mentor
             </div>
         </div>
 
     </div>
 
-    <div class="bottom-tab-bar">
-        <div class="tab-item active" onclick="UIManager.switchTab('tab-ledger', this)">
+    <div class="bottom-tab-bar" id="bottomTabBar">
+        <div class="tab-item active" data-target="tab-ledger" onclick="UIManager.switchTab('tab-ledger', this)">
             <span class="tab-icon">📝</span><span>장부</span>
         </div>
-        <div class="tab-item" onclick="UIManager.switchTab('tab-stats', this)">
+        <div class="tab-item" data-target="tab-stats" onclick="UIManager.switchTab('tab-stats', this)">
             <span class="tab-icon">📊</span><span>통계</span>
         </div>
-        <div class="tab-item" onclick="UIManager.switchTab('tab-assets', this)">
+        <div class="tab-item" data-target="tab-assets" onclick="UIManager.switchTab('tab-assets', this)">
             <span class="tab-icon">💰</span><span>자산</span>
         </div>
-        <div class="tab-item" onclick="UIManager.switchTab('tab-settings', this)">
+        <div class="tab-item" data-target="tab-settings" onclick="UIManager.switchTab('tab-settings', this)">
             <span class="tab-icon">⚙️</span><span>설정</span>
         </div>
     </div>
@@ -755,11 +757,11 @@
         async init() {
             const vault = localStorage.getItem('jm_secure_vault');
             const legacySettings = DataStore.safeParse('accountSettings', {});
+            const isSessionUnlocked = sessionStorage.getItem('jm_app_unlocked') === 'true';
             
             if (vault) {
                 DataStore.isEncrypted = true;
                 const tempKey = sessionStorage.getItem('jm_temp_key');
-                const isSessionUnlocked = sessionStorage.getItem('jm_app_unlocked') === 'true';
                 
                 if (isSessionUnlocked && tempKey) {
                     try {
@@ -780,7 +782,7 @@
                 this.legacyPin = legacySettings.appPin;
                 
                 const tempKey = sessionStorage.getItem('jm_temp_key');
-                if (sessionStorage.getItem('jm_app_unlocked') === 'true' && tempKey === this.legacyPin) {
+                if (isSessionUnlocked && tempKey === this.legacyPin) {
                     this.currentPin = tempKey;
                     await this.executeMigration();
                 } else {
@@ -958,15 +960,71 @@
         searchTimeout: null,
         currentStockAccount: '기본 계좌', 
 
+        // [신규] 스와이프 제어 변수
+        tabs: ['tab-ledger', 'tab-stats', 'tab-assets', 'tab-settings'],
+        currentTabIndex: 0,
+        touchStartX: 0,
+        touchEndX: 0,
+        touchStartY: 0,
+        touchEndY: 0,
+
+        // [수정됨] 탭 전환 시 인덱스 동기화
         switchTab(tabId, element) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
+            
+            const targetTab = document.getElementById(tabId);
+            targetTab.classList.add('active');
+            
+            // element가 주어지지 않은 경우(스와이프 등)를 위해 탭 아이콘 강제 활성화
+            if(!element) {
+                element = document.querySelector(`.tab-item[data-target="${tabId}"]`);
+            }
             if(element) element.classList.add('active');
+            
+            // 현재 인덱스 동기화
+            this.currentTabIndex = this.tabs.indexOf(tabId);
+            
             window.scrollTo({ top: 0, behavior: 'smooth' });
             
             if(tabId === 'tab-stats' && this.expenseChartObj) this.expenseChartObj.resize();
             if(tabId === 'tab-assets' && this.stockChartObj) this.stockChartObj.resize();
+        },
+
+        // [신규] 터치 스와이프 이벤트 설정
+        initSwipeEngine() {
+            const container = document.getElementById('swipeContainer');
+            
+            container.addEventListener('touchstart', e => {
+                this.touchStartX = e.changedTouches[0].screenX;
+                this.touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            container.addEventListener('touchend', e => {
+                this.touchEndX = e.changedTouches[0].screenX;
+                this.touchEndY = e.changedTouches[0].screenY;
+                this.handleSwipe();
+            }, { passive: true });
+        },
+
+        // [신규] 스와이프 판단 로직 (가로로 50px 이상 밀었을 때만 작동, 세로 스크롤 시 무시)
+        handleSwipe() {
+            const xDiff = this.touchEndX - this.touchStartX;
+            const yDiff = this.touchEndY - this.touchStartY;
+            
+            if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(yDiff)) {
+                if (xDiff > 0) {
+                    // Right swipe -> Previous tab
+                    if (this.currentTabIndex > 0) {
+                        this.switchTab(this.tabs[this.currentTabIndex - 1]);
+                    }
+                } else {
+                    // Left swipe -> Next tab
+                    if (this.currentTabIndex < this.tabs.length - 1) {
+                        this.switchTab(this.tabs[this.currentTabIndex + 1]);
+                    }
+                }
+            }
         },
 
         debouncedRender() {
@@ -1120,7 +1178,7 @@
                     <div style="display:flex; gap:6px; flex:1; min-width: 120px; justify-content: flex-end;">
                         <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1;">초기화</button>
                         <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">수정 취소</button>
-                        <button id="submitBtn" class="std-btn bg-title" style="background:var(--text-title); flex:2;" onclick="AppCtrl.submitEntry()">내역 등록</button>
+                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2;" onclick="AppCtrl.submitEntry()">내역 등록</button>
                     </div>
                 </div>
                 <div id="recurringListContainer" style="width:100%;"></div>
@@ -1829,16 +1887,16 @@
     };
 
     // ==========================================
-    // 5. AppCtrl
+    // 7. AppCtrl (메인 로직 및 연결부)
     // ==========================================
     const AppCtrl = {
         init() { 
             DataStore.initPlaintext(); 
             UIManager.initFilters(); 
+            UIManager.initSwipeEngine(); // [신규] 스와이프 제스처 엔진 가동
             AuthCtrl.init(); 
         },
 
-        // [신규] 잠금 화면 해제 후 호출되는 앱 렌더링 부트 시퀀스
         onAppUnlocked() {
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('appWrapper').style.display = 'block';
@@ -1910,6 +1968,10 @@
             UIManager.renderStockModule();
         },
 
+        deleteStockAccount() {
+            const current = UIManager.currentStockAccount;
+            if (current === '기본 계좌') { alert('기본 계좌는 삭제할 수 জ্ঞ```html
+        // ... (이전 코드 유지)
         deleteStockAccount() {
             const current = UIManager.currentStockAccount;
             if (current === '기본 계좌') { alert('기본 계좌는 삭제할 수 없습니다.'); return; }
@@ -2320,7 +2382,6 @@
                                 monthlyMemos: _memos, settings: _settings
                             };
                             
-                            // [수정됨] 평문 복원 시 이전 암호화 캡슐 완전 파괴
                             localStorage.removeItem('jm_secure_vault'); 
                             
                             await DataStore.save();
