@@ -94,12 +94,9 @@
         
         input, select, .std-btn, textarea { height: 42px; padding: 0 12px; font-size: 14px; border: 1px solid var(--border-input); border-radius: 8px; font-family: inherit; background-color: var(--bg-input); color: var(--text-main); transition: border-color 0.2s; }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary); background-color: var(--bg-box); }
-        
-        .std-btn { display: flex; align-items: center; justify-content: center; background-color: var(--text-title); color: white; border: none; cursor: pointer; font-weight: bold; font-size: 14px; border-radius: 8px; }
+        .std-btn { background-color: var(--text-title); color: white; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .util-btn { height: 28px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } 
-        .btn-gray { background-color: var(--border-light); color: var(--text-main); }
-        
+        .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } .btn-gray { background-color: #dfe6e9; color: #2d3436; }
         .flex-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; } .flex-1 { flex: 1; min-width: 120px; }
         
         .bg-primary { background-color: var(--color-primary) !important; color: #ffffff !important;} 
@@ -107,7 +104,6 @@
         .bg-gray { background-color: var(--border-light); color: var(--text-main); }
         .bg-danger { background-color: var(--color-expense) !important; color: white !important;}
         
-        /* [수정됨] 체크박스 색상 통일 */
         .checkbox-label { font-size: 13px; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); cursor: pointer; }
 
         .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -440,7 +436,7 @@
                         <input type="number" id="stockEndingBalanceInput" placeholder="월말 계좌 총액" class="flex-1">
                     </div>
                     <div class="flex-row mobile-row" style="margin-bottom: 0;">
-                        <button class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">선택 계좌에 기록 저장</button>
+                        <button class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">선택 계좌에 월간 기록 저장</button>
                     </div>
                 </div>
             </div>
@@ -483,7 +479,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v5.4 (UI Perfect)<br>
+                통합 자산 가계부 System v5.5 (Final Polish)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -504,7 +500,10 @@
             <span class="tab-icon">⚙️</span><span>설정</span>
         </div>
     </div>
-</div> <script>
+</div> <datalist id="descHistoryList"></datalist>
+<datalist id="noteHistoryList"></datalist>
+
+<script>
     const Utils = {
         escHtml: (str) => {
             if (str === null || str === undefined) return '';
@@ -523,7 +522,7 @@
     };
 
     // ==========================================
-    // 2. CryptoVault 
+    // 2. CryptoVault
     // ==========================================
     const CryptoVault = {
         async getDerivationParams(salt) {
@@ -952,7 +951,7 @@
     };
 
     // ==========================================
-    // 5. UIManager 
+    // 5. UIManager (수정된 렌더링 로직)
     // ==========================================
     const UIManager = {
         currentEditId: null,
@@ -970,17 +969,17 @@
         touchStartY: 0,
         touchEndY: 0,
 
-        // [수정됨] 닫는 태그 주입으로 datalist 브라우저 호환성 복구
+        // [수정됨] 자동완성 Datalist에 명시적 닫는 태그 주입
         updateDescDatalist() {
             const descList = document.getElementById('descHistoryList'); 
             const noteList = document.getElementById('noteHistoryList');
             if(descList) {
                 const uniqueDescs = [...new Set([...DataStore.state.entries].reverse().map(e => e.desc).filter(Boolean))];
-                descList.innerHTML = uniqueDescs.map(desc => `<option value="${Utils.escHtml(desc)}"></option>`).join('');
+                descList.innerHTML = uniqueDescs.map(desc => `<option value="${Utils.escHtml(desc)}">${Utils.escHtml(desc)}</option>`).join('');
             }
             if(noteList) {
                 const uniqueNotes = [...new Set([...DataStore.state.entries].reverse().map(e => e.note).filter(Boolean))];
-                noteList.innerHTML = uniqueNotes.map(note => `<option value="${Utils.escHtml(note)}"></option>`).join('');
+                noteList.innerHTML = uniqueNotes.map(note => `<option value="${Utils.escHtml(note)}">${Utils.escHtml(note)}</option>`).join('');
             }
         },
 
@@ -1057,11 +1056,7 @@
             }
         },
 
-        renderAll() { 
-            this.renderColManagement(); 
-            this.renderInputForm(); 
-            this.render(); 
-        },
+        renderAll() { this.renderColManagement(); this.renderInputForm(); this.render(); },
 
         toggleSection(containerId, iconId) {
             const content = document.getElementById(containerId);
@@ -1130,7 +1125,7 @@
             `).join('');
         },
 
-        // [수정됨] 버튼 레이아웃 붕괴 수정 및 Flex 래핑 적용
+        // [수정됨] Flexbox 래핑 및 텍스트 초압축, autocomplete 속성 해제
         renderInputForm() {
             const container = document.getElementById('inputFormGroup');
             let assetOptions = '<option value="">자산 선택 안함</option>';
@@ -1151,9 +1146,10 @@
                     <select id="typeInput" class="flex-1" style="min-width:100px; font-weight:bold;"><option value="expense">지출</option><option value="income">수입</option><option value="transfer">이체/상환</option></select>
                     <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1" style="min-width:100px; font-weight:bold; color:var(--color-expense);">
                 </div>
+                
                 <div class="row-desc-note flex-row mobile-row" style="width: 100%;">
-                    <input type="text" id="descInput" list="descHistoryList" autocomplete="on" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
-                    <input type="text" id="noteInput" list="noteHistoryList" autocomplete="on" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
+                    <input type="text" id="descInput" list="descHistoryList" autocomplete="off" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
+                    <input type="text" id="noteInput" list="noteHistoryList" autocomplete="off" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
                 </div>
                 
                 <div class="row-assets" style="background: var(--bg-highlight); padding: 12px; border-radius: 8px; margin-bottom: 15px; width: 100%;">
@@ -1191,8 +1187,8 @@
                     </div>
                     <div style="display:flex; gap:6px; flex:1; min-width: 160px; justify-content: flex-end;">
                         <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1;">초기화</button>
-                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">수정 취소</button>
-                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2;" onclick="AppCtrl.submitEntry()">내역 등록</button>
+                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">취소</button>
+                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2;" onclick="AppCtrl.submitEntry()">등록</button>
                     </div>
                 </div>
                 <div id="recurringListContainer" style="width:100%;"></div>
@@ -1253,7 +1249,7 @@
             document.getElementById('newAssetType').value = 'asset'; document.getElementById('newAssetName').value = '';
             document.getElementById('newAssetBalance').value = ''; document.getElementById('newAssetDate').value = '';
             document.getElementById('newAssetMaturity').value = ''; document.getElementById('newAssetRate').value = '';
-            document.getElementById('submitAssetBtn').innerText = '자산 추가'; document.getElementById('cancelAssetEditBtn').style.display = 'none';
+            document.getElementById('submitAssetBtn').innerText = '추가하기'; document.getElementById('cancelAssetEditBtn').style.display = 'none';
         },
 
         calculateAndRenderAssets() {
@@ -2100,7 +2096,7 @@
                 const idx = DataStore.state.entries.findIndex(e => e.id === UIManager.currentEditId);
                 if(idx !== -1) DataStore.state.entries[idx] = { ...DataStore.state.entries[idx], ...entryData, customData: { ...DataStore.state.entries[idx].customData, ...entryData.customData } };
                 UIManager.currentEditId = null; 
-                document.getElementById('submitBtn').innerText = '내역 등록'; 
+                document.getElementById('submitBtn').innerText = '등록'; 
                 document.getElementById('cancelEditBtn').style.display = 'none';
             } else {
                 DataStore.state.entries.push({ id: 'ent_' + Utils.generateID(), ...entryData });
@@ -2128,8 +2124,7 @@
             document.getElementById('repeatType').value = 'none'; UIManager.toggleRepeatDate();
             DataStore.state.customCols.forEach(col => { const inp = document.getElementById(`customInput_${col.id}`); if(inp) inp.value = e.customData?.[col.id] || ''; });
             
-            // [수정됨] 수정 버튼과 취소 버튼의 Flex 호환성 통일
-            document.getElementById('submitBtn').innerText = '단일 수정 완료'; 
+            document.getElementById('submitBtn').innerText = '수정'; 
             document.getElementById('cancelEditBtn').style.display = 'flex';
             
             UIManager.switchTab('tab-ledger');
@@ -2137,7 +2132,7 @@
         },
         cancelEdit() { 
             UIManager.currentEditId = null; 
-            document.getElementById('submitBtn').innerText = '내역 등록'; 
+            document.getElementById('submitBtn').innerText = '등록'; 
             document.getElementById('cancelEditBtn').style.display = 'none'; 
             UIManager.clearInputs(); 
         },
