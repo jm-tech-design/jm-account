@@ -21,8 +21,7 @@
             --text-main: #2d3436; --text-title: #1e272e; 
             --text-muted: #636e72; 
             --border-main: transparent; --border-input: #dfe6e9; --border-light: #f1f2f6;
-            --color-income: #0984e3; --color-expense: #d63031; --color-warning: #e17055; 
-            --color-primary: #6c5ce7;
+            --color-income: #0984e3; --color-expense: #d63031; --color-warning: #e17055; --color-primary: #6c5ce7;
             --bg-table-head: #f5f6fa; --text-table-head: #2d3436;
             --bg-highlight: #e3f2fd; --border-highlight: #74b9ff;
             --bg-carried: #fff9c4; --bg-excluded: #f5f6fa; --bg-chart: #dfe6e9;
@@ -37,8 +36,7 @@
                 --text-main: #e0e0e0; --text-title: #ffffff; 
                 --text-muted: #888888; 
                 --border-main: transparent; --border-input: #444444; --border-light: #333333;
-                --color-income: #74b9ff; --color-expense: #ff7675; --color-warning: #fab1a0; 
-                --color-primary: #8c7ae6; /* 다크모드 시인성을 위해 채도 보정 */
+                --color-income: #74b9ff; --color-expense: #ff7675; --color-warning: #fab1a0; --color-primary: #8c7ae6;
                 --bg-table-head: #2d3436; --text-table-head: #e0e0e0;
                 --bg-highlight: #2c3e50; --border-highlight: #34495e;
                 --bg-carried: #3e3b22; --bg-excluded: #222222; --bg-chart: #444444;
@@ -96,9 +94,12 @@
         
         input, select, .std-btn, textarea { height: 42px; padding: 0 12px; font-size: 14px; border: 1px solid var(--border-input); border-radius: 8px; font-family: inherit; background-color: var(--bg-input); color: var(--text-main); transition: border-color 0.2s; }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary); background-color: var(--bg-box); }
-        .std-btn { background-color: var(--text-title); color: white; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        
+        .std-btn { display: flex; align-items: center; justify-content: center; background-color: var(--text-title); color: white; border: none; cursor: pointer; font-weight: bold; font-size: 14px; border-radius: 8px; }
         .util-btn { height: 28px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } .btn-gray { background-color: #dfe6e9; color: #2d3436; }
+        .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } 
+        .btn-gray { background-color: var(--border-light); color: var(--text-main); }
+        
         .flex-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; } .flex-1 { flex: 1; min-width: 120px; }
         
         .bg-primary { background-color: var(--color-primary) !important; color: #ffffff !important;} 
@@ -106,6 +107,9 @@
         .bg-gray { background-color: var(--border-light); color: var(--text-main); }
         .bg-danger { background-color: var(--color-expense) !important; color: white !important;}
         
+        /* [수정됨] 체크박스 색상 통일 */
+        .checkbox-label { font-size: 13px; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); cursor: pointer; }
+
         .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
         .summary-card { background: var(--bg-box); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: center; }
         .summary-card.main { grid-column: span 4; background: var(--bg-main-card); color: var(--text-main-card); padding: 20px; }
@@ -306,7 +310,6 @@
             </div>
         </div>
 
-
         <div id="tab-stats" class="tab-content" data-tab-index="1">
             <div class="box">
                 <div class="box-title">
@@ -336,8 +339,8 @@
                     </table>
                 </div>
                 <div class="flex-row" style="margin-top: 12px; margin-bottom: 0;">
-                    <button class="std-btn bg-gray flex-1" onclick="UIManager.changeGlobalYear(-1)">◀ 이전 연도</button>
-                    <button class="std-btn bg-gray flex-1" onclick="UIManager.changeGlobalYear(1)">다음 연도 ▶</button>
+                    <button class="std-btn btn-gray flex-1" onclick="UIManager.changeGlobalYear(-1)">◀ 이전 연도</button>
+                    <button class="std-btn btn-gray flex-1" onclick="UIManager.changeGlobalYear(1)">다음 연도 ▶</button>
                 </div>
             </div>
         </div>
@@ -437,7 +440,7 @@
                         <input type="number" id="stockEndingBalanceInput" placeholder="월말 계좌 총액" class="flex-1">
                     </div>
                     <div class="flex-row mobile-row" style="margin-bottom: 0;">
-                        <button class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">선택 계좌에 월간 기록 저장</button>
+                        <button class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addStockRecord()">선택 계좌에 기록 저장</button>
                     </div>
                 </div>
             </div>
@@ -459,13 +462,13 @@
                 <div class="box-title" style="color: var(--color-expense);">💾 데이터 백업 및 복원 (중요)</div>
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">안전한 곳에 주기적으로 데이터를 백업하십시오. 데이터는 서버가 아닌 <strong>오직 이 브라우저</strong>에만 보관되므로 캐시 삭제 시 소멸될 수 있습니다.</p>
                 <div class="flex-row mobile-row">
-                    <button class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.backupData()">전체 데이터 백업 (.txt)</button>
-                    <button class="std-btn bg-gray flex-1 btn-fixed" onclick="document.getElementById('restoreInput').click()">백업 데이터 복원</button>
+                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="AppCtrl.backupData()">전체 데이터 백업 (.txt)</button>
+                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="document.getElementById('restoreInput').click()">백업 데이터 복원</button>
                     <input type="file" id="restoreInput" style="display:none;" accept=".json, .txt" onchange="AppCtrl.restoreData(event)">
                 </div>
                 <div class="flex-row mobile-row" style="margin-top: 10px; margin-bottom: 0;">
-                    <button class="std-btn bg-blue flex-1 btn-fixed" onclick="AppCtrl.exportToCSV()">현재 목록 CSV 내보내기</button>
-                    <button class="std-btn bg-gray flex-1 btn-fixed" onclick="document.getElementById('importCsvInput').click()">CSV 엑셀 불러오기</button>
+                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="AppCtrl.exportToCSV()">현재 목록 CSV 내보내기</button>
+                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="document.getElementById('importCsvInput').click()">CSV 불러오기</button>
                     <input type="file" id="importCsvInput" style="display:none;" accept=".csv" onchange="AppCtrl.importFromCSV(event)">
                 </div>
             </div>
@@ -475,12 +478,12 @@
                 <ul class="simple-list" id="customColList" style="margin-bottom: 10px;"></ul>
                 <div class="flex-row mobile-row" style="margin-bottom: 0;">
                     <input type="text" id="newColName" placeholder="새 항목 이름 (예: 결제수단)" class="flex-1">
-                    <button class="std-btn bg-gray btn-fixed" onclick="AppCtrl.addColumn()">추가</button>
+                    <button class="std-btn btn-gray btn-fixed" onclick="AppCtrl.addColumn()">추가</button>
                 </div>
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v5.3 (Secure Edition)<br>
+                통합 자산 가계부 System v5.4 (UI Perfect)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -520,7 +523,7 @@
     };
 
     // ==========================================
-    // 2. CryptoVault (군사급 암호화 모듈)
+    // 2. CryptoVault 
     // ==========================================
     const CryptoVault = {
         async getDerivationParams(salt) {
@@ -949,7 +952,7 @@
     };
 
     // ==========================================
-    // 5. UIManager (수정된 스와이프 로직 탑재)
+    // 5. UIManager 
     // ==========================================
     const UIManager = {
         currentEditId: null,
@@ -960,7 +963,6 @@
         searchTimeout: null,
         currentStockAccount: '기본 계좌', 
         
-        // [신규] 스와이프 제어 변수
         tabs: ['tab-ledger', 'tab-stats', 'tab-assets', 'tab-settings'],
         currentTabIndex: 0,
         touchStartX: 0,
@@ -968,7 +970,20 @@
         touchStartY: 0,
         touchEndY: 0,
 
-        // [신규] 터치 이벤트 리스너 이식
+        // [수정됨] 닫는 태그 주입으로 datalist 브라우저 호환성 복구
+        updateDescDatalist() {
+            const descList = document.getElementById('descHistoryList'); 
+            const noteList = document.getElementById('noteHistoryList');
+            if(descList) {
+                const uniqueDescs = [...new Set([...DataStore.state.entries].reverse().map(e => e.desc).filter(Boolean))];
+                descList.innerHTML = uniqueDescs.map(desc => `<option value="${Utils.escHtml(desc)}"></option>`).join('');
+            }
+            if(noteList) {
+                const uniqueNotes = [...new Set([...DataStore.state.entries].reverse().map(e => e.note).filter(Boolean))];
+                noteList.innerHTML = uniqueNotes.map(note => `<option value="${Utils.escHtml(note)}"></option>`).join('');
+            }
+        },
+
         initSwipeEngine() {
             const container = document.getElementById('swipeContainer');
             if (!container) return;
@@ -985,23 +1000,15 @@
             }, { passive: true });
         },
 
-        // [신규] 스와이프 방향 판단
         handleSwipe() {
             const xDiff = this.touchEndX - this.touchStartX;
             const yDiff = this.touchEndY - this.touchStartY;
 
-            // 상하 스크롤을 방해하지 않기 위해 좌우로만 60px 이상 확실히 밀었을 때 작동
             if (Math.abs(xDiff) > 60 && Math.abs(xDiff) > Math.abs(yDiff)) {
                 if (xDiff > 0) {
-                    // 오른쪽으로 넘김 -> 이전 탭
-                    if (this.currentTabIndex > 0) {
-                        this.switchTab(this.tabs[this.currentTabIndex - 1]);
-                    }
+                    if (this.currentTabIndex > 0) this.switchTab(this.tabs[this.currentTabIndex - 1]);
                 } else {
-                    // 왼쪽으로 넘김 -> 다음 탭
-                    if (this.currentTabIndex < this.tabs.length - 1) {
-                        this.switchTab(this.tabs[this.currentTabIndex + 1]);
-                    }
+                    if (this.currentTabIndex < this.tabs.length - 1) this.switchTab(this.tabs[this.currentTabIndex + 1]);
                 }
             }
         },
@@ -1017,7 +1024,6 @@
             }
             if(element) element.classList.add('active');
             
-            // 현재 탭 인덱스 동기화
             this.currentTabIndex = this.tabs.indexOf(tabId);
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1051,7 +1057,11 @@
             }
         },
 
-        renderAll() { this.renderColManagement(); this.renderInputForm(); this.render(); },
+        renderAll() { 
+            this.renderColManagement(); 
+            this.renderInputForm(); 
+            this.render(); 
+        },
 
         toggleSection(containerId, iconId) {
             const content = document.getElementById(containerId);
@@ -1120,6 +1130,7 @@
             `).join('');
         },
 
+        // [수정됨] 버튼 레이아웃 붕괴 수정 및 Flex 래핑 적용
         renderInputForm() {
             const container = document.getElementById('inputFormGroup');
             let assetOptions = '<option value="">자산 선택 안함</option>';
@@ -1141,20 +1152,24 @@
                     <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1" style="min-width:100px; font-weight:bold; color:var(--color-expense);">
                 </div>
                 <div class="row-desc-note flex-row mobile-row" style="width: 100%;">
-                    <input type="text" id="descInput" list="descHistoryList" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
-                    <input type="text" id="noteInput" list="noteHistoryList" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
+                    <input type="text" id="descInput" list="descHistoryList" autocomplete="on" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
+                    <input type="text" id="noteInput" list="noteHistoryList" autocomplete="on" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
                 </div>
-                <div class="row-assets flex-row mobile-row" style="width: 100%; background: var(--bg-highlight); padding: 8px; border-radius: 8px; margin-bottom: 12px;">
-                    <div style="font-size:11px; font-weight:bold; color:var(--color-primary); width:100%; margin-bottom:2px;">자산/부채 연동 (옵션)</div>
-                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
-                        <select id="linkedAsset1" style="flex:1;" title="연동 자산 1">${assetOptions}</select>
-                        <select id="linkedAssetOp1" style="width:45px; padding:0;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
-                    </div>
-                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
-                        <select id="linkedAsset2" style="flex:1;" title="연동 자산 2">${assetOptions}</select>
-                        <select id="linkedAssetOp2" style="width:45px; padding:0;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
+                
+                <div class="row-assets" style="background: var(--bg-highlight); padding: 12px; border-radius: 8px; margin-bottom: 15px; width: 100%;">
+                    <div style="font-size:11px; font-weight:bold; color:var(--color-primary); margin-bottom:8px;">자산/부채 연동 (옵션)</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; flex:1; min-width:140px; gap:4px;">
+                            <select id="linkedAsset1" style="flex:1; height:38px; font-size:13px;" title="연동 자산 1">${assetOptions}</select>
+                            <select id="linkedAssetOp1" style="width:45px; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
+                        </div>
+                        <div style="display:flex; flex:1; min-width:140px; gap:4px;">
+                            <select id="linkedAsset2" style="flex:1; height:38px; font-size:13px;" title="연동 자산 2">${assetOptions}</select>
+                            <select id="linkedAssetOp2" style="width:45px; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
+                        </div>
                     </div>
                 </div>
+                
                 <div class="row-memo" style="width: 100%; margin-bottom:15px;">
                     <div onclick="UIManager.toggleMemo()" style="cursor:pointer; font-size:12px; color:var(--text-title); font-weight:bold; display:flex; align-items:center;">
                         <span id="memoToggleIcon" style="margin-right:5px;">▶</span> 긴 상세 메모 작성하기
@@ -1170,11 +1185,11 @@
             }
             html += `
                 <div class="row-submit flex-row" style="width: 100%; justify-content: space-between; align-items: center; margin-top: 5px;">
-                    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 120px;">
-                        <label class="checkbox-label" style="color:var(--text-muted); font-size:11px;"><input type="checkbox" id="excludeStatsOnlyInput"> 차트 통계에서만 제외</label>
-                        <label class="checkbox-label" style="font-size:11px;"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
+                    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px;">
+                        <label class="checkbox-label"><input type="checkbox" id="excludeStatsOnlyInput"> 차트 통계에서만 제외</label>
+                        <label class="checkbox-label"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
                     </div>
-                    <div style="display:flex; gap:6px; flex:1; min-width: 120px; justify-content: flex-end;">
+                    <div style="display:flex; gap:6px; flex:1; min-width: 160px; justify-content: flex-end;">
                         <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1;">초기화</button>
                         <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">수정 취소</button>
                         <button id="submitBtn" class="std-btn bg-primary" style="flex:2;" onclick="AppCtrl.submitEntry()">내역 등록</button>
@@ -1231,18 +1246,6 @@
             });
             html += '</ul></div>';
             container.innerHTML = html;
-        },
-
-        updateDescDatalist() {
-            const descList = document.getElementById('descHistoryList'); const noteList = document.getElementById('noteHistoryList');
-            if(descList) {
-                const uniqueDescs = [...new Set([...DataStore.state.entries].reverse().map(e => e.desc).filter(Boolean))];
-                descList.innerHTML = uniqueDescs.map(desc => `<option value="${Utils.escHtml(desc)}">`).join('');
-            }
-            if(noteList) {
-                const uniqueNotes = [...new Set([...DataStore.state.entries].reverse().map(e => e.note).filter(Boolean))];
-                noteList.innerHTML = uniqueNotes.map(note => `<option value="${Utils.escHtml(note)}">`).join('');
-            }
         },
 
         cancelAssetEdit() {
@@ -1886,17 +1889,16 @@
     };
 
     // ==========================================
-    // 6. AppCtrl (메인 로직 및 연결부)
+    // 7. AppCtrl
     // ==========================================
     const AppCtrl = {
         init() { 
             DataStore.initPlaintext(); 
             UIManager.initFilters(); 
-            UIManager.initSwipeEngine(); // 스와이프 감지기 가동
+            UIManager.initSwipeEngine(); 
             AuthCtrl.init(); 
         },
 
-        // 잠금 화면 해제 후 호출되는 앱 렌더링 부트 시퀀스
         onAppUnlocked() {
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('appWrapper').style.display = 'block';
@@ -2044,7 +2046,15 @@
             document.getElementById('newAssetType').value = ast.type; document.getElementById('newAssetName').value = ast.name;
             document.getElementById('newAssetBalance').value = ast.baseBalance; document.getElementById('newAssetDate').value = ast.inputDate || '';
             document.getElementById('newAssetMaturity').value = ast.maturityDate || ''; document.getElementById('newAssetRate').value = ast.rate || '';
-            document.getElementById('submitAssetBtn').innerText = '수정 완료'; document.getElementById('cancelAssetEditBtn').style.display = 'inline-flex';
+            
+            const btn = document.getElementById('submitAssetBtn');
+            btn.innerText = '수정 완료';
+            btn.style.display = 'flex';
+            const cancelBtn = document.getElementById('cancelAssetEditBtn');
+            cancelBtn.style.display = 'flex';
+            
+            UIManager.switchTab('tab-assets');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         },
 
         deleteAsset(id) {
@@ -2089,7 +2099,9 @@
             if (UIManager.currentEditId) {
                 const idx = DataStore.state.entries.findIndex(e => e.id === UIManager.currentEditId);
                 if(idx !== -1) DataStore.state.entries[idx] = { ...DataStore.state.entries[idx], ...entryData, customData: { ...DataStore.state.entries[idx].customData, ...entryData.customData } };
-                UIManager.currentEditId = null; document.getElementById('submitBtn').innerText = '내역 등록'; document.getElementById('cancelEditBtn').style.display = 'none';
+                UIManager.currentEditId = null; 
+                document.getElementById('submitBtn').innerText = '내역 등록'; 
+                document.getElementById('cancelEditBtn').style.display = 'none';
             } else {
                 DataStore.state.entries.push({ id: 'ent_' + Utils.generateID(), ...entryData });
                 const rType = document.getElementById('repeatType').value;
@@ -2115,12 +2127,20 @@
             if(document.getElementById('memoInput')) { document.getElementById('memoInput').value = e.memo || ''; UIManager.checkMemoContent(); }
             document.getElementById('repeatType').value = 'none'; UIManager.toggleRepeatDate();
             DataStore.state.customCols.forEach(col => { const inp = document.getElementById(`customInput_${col.id}`); if(inp) inp.value = e.customData?.[col.id] || ''; });
-            document.getElementById('submitBtn').innerText = '단일 수정 완료'; document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+            
+            // [수정됨] 수정 버튼과 취소 버튼의 Flex 호환성 통일
+            document.getElementById('submitBtn').innerText = '단일 수정 완료'; 
+            document.getElementById('cancelEditBtn').style.display = 'flex';
             
             UIManager.switchTab('tab-ledger');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         },
-        cancelEdit() { UIManager.currentEditId = null; document.getElementById('submitBtn').innerText = '내역 등록'; document.getElementById('cancelEditBtn').style.display = 'none'; UIManager.clearInputs(); },
+        cancelEdit() { 
+            UIManager.currentEditId = null; 
+            document.getElementById('submitBtn').innerText = '내역 등록'; 
+            document.getElementById('cancelEditBtn').style.display = 'none'; 
+            UIManager.clearInputs(); 
+        },
         deleteEntry(id) { if(confirm('삭제하시겠습니까?')) { if(UIManager.currentEditId === id) this.cancelEdit(); DataStore.state.entries = DataStore.state.entries.filter(e => e.id !== id); DataStore.save(); DataStore.pushState(); UIManager.render(); } },
         deleteRecurring(id) { if(confirm('예약 취소?')) { DataStore.state.recurringTasks = DataStore.state.recurringTasks.filter(t => t.id !== id); DataStore.save(); DataStore.pushState(); UIManager.renderRecurringTasks(); } },
 
