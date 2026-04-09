@@ -312,7 +312,6 @@
             </div>
         </div>
 
-
         <div id="tab-stats" class="tab-content" data-tab-index="1">
             <div class="box">
                 <div class="box-title">
@@ -749,8 +748,9 @@
                     localStorage.removeItem('jm_secure_vault');
                 }
 
+                // [신규] 저장이 완료되면 백그라운드에서 구글 드라이브 동기화 시도
                 if(DriveCtrl.isAuthenticated) {
-                    DriveCtrl.uploadToDrive(true); 
+                    DriveCtrl.uploadToDrive(true); // true = silent mode
                 }
 
             } catch (e) {
@@ -791,11 +791,11 @@
     };
 
     // ==========================================
-    // 4. DriveCtrl (구글 드라이브 동기화 모듈)
+    // [신규] 4. DriveCtrl (구글 드라이브 동기화 모듈)
     // ==========================================
     const DriveCtrl = {
         DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-        SCOPES: 'https://www.googleapis.com/auth/drive.file',
+        SCOPES: 'https://www.googleapis.com/auth/drive.file', // 앱이 생성한 파일에만 접근 권한
         tokenClient: null,
         gapiInited: false,
         gisInited: false,
@@ -812,6 +812,7 @@
                 document.getElementById('driveSetupUI').style.display = 'none';
                 document.getElementById('driveSyncUI').style.display = 'block';
                 
+                // 구글 API 비동기 로딩 대기
                 this.waitForGoogleApis(() => {
                     this.initializeGapiClient(apiKey);
                     this.initializeGisClient(clientId);
@@ -863,7 +864,7 @@
                 this.tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: clientId,
                     scope: this.SCOPES,
-                    callback: '', 
+                    callback: '', // defined later
                 });
                 this.gisInited = true;
                 this.checkAuthStatus();
@@ -874,6 +875,7 @@
 
         checkAuthStatus() {
             if (this.gapiInited && this.gisInited) {
+                // If we already have a valid token in this session
                 const token = gapi.client.getToken();
                 if (token && token.access_token) {
                     this.showAuthorizedUI();
@@ -898,6 +900,7 @@
                     throw (resp);
                 }
                 this.showAuthorizedUI();
+                // 첫 연동 시 드라이브에서 데이터를 찾아보고, 없으면 현재 데이터를 올림
                 const fileId = await this.findFileId();
                 if(!fileId) {
                     alert('연동 성공. 최초 1회 데이터를 클라우드로 백업합니다.');
@@ -952,6 +955,7 @@
             try {
                 if(!isSilent) document.body.style.cursor = 'wait';
                 
+                // 보낼 데이터 준비
                 let backupDataStr = '';
                 if (DataStore.isEncrypted) {
                     backupDataStr = JSON.stringify({ is_secure_vault: true, payload: localStorage.getItem('jm_secure_vault') });
@@ -1012,6 +1016,7 @@
 
                 const preservedPin = AuthCtrl.currentPin;
 
+                // 복원 로직 (파일 업로드 복원과 동일)
                 if (rData.is_secure_vault && rData.payload) {
                     const pin = prompt('클라우드 백업 파일이 암호화되어 있습니다.\n백업 당시의 4자리 PIN 번호를 입력하세요:');
                     if (!pin) { alert('복원이 취소되었습니다.'); return; }
@@ -1187,7 +1192,7 @@
                 if (val === this.currentPin) {
                     this.currentPin = null;
                     DataStore.isEncrypted = false;
-                    await DataStore.save(); 
+                    await DataStore.save(); // 암호화 해제하여 저장
                     sessionStorage.removeItem('jm_app_unlocked');
                     sessionStorage.removeItem('jm_temp_key');
                     alert('보안 해제 완료: 이제 데이터가 평문으로 저장됩니다.');
@@ -1202,7 +1207,7 @@
         async executeMigration() {
             if(DataStore.state.settings) delete DataStore.state.settings.appPin;
             DataStore.isEncrypted = true;
-            await DataStore.save(); 
+            await DataStore.save(); // 암호화 후 평문 삭제
             alert('시스템 보안 업데이트 완료.\n당신의 데이터가 AES-256 규격으로 안전하게 암호화 마이그레이션 되었습니다.');
             AppCtrl.onAppUnlocked();
         },
@@ -1307,6 +1312,7 @@
             if (!container) return;
 
             container.addEventListener('touchstart', e => {
+                // 가로 스크롤이 있는 표 영역을 터치했는지 검사
                 const isScrollable = e.target.closest('.table-container') || e.target.closest('.settlement-chart-container');
                 this.ignoreSwipe = !!isScrollable;
 
@@ -1315,7 +1321,7 @@
             }, { passive: true });
 
             container.addEventListener('touchend', e => {
-                if (this.ignoreSwipe) return; 
+                if (this.ignoreSwipe) return; // 표 안에서 스크롤 중이면 탭 넘김 무시
 
                 this.touchEndX = e.changedTouches[0].screenX;
                 this.touchEndY = e.changedTouches[0].screenY;
@@ -1449,7 +1455,6 @@
             `).join('');
         },
 
-        // [수정됨] 버튼 가로 배치 및 텍스트 초압축 (flex 활용)
         renderInputForm() {
             const container = document.getElementById('inputFormGroup');
             let assetOptions = '<option value="">자산 선택 안함</option>';
@@ -1470,21 +1475,26 @@
                     <select id="typeInput" class="flex-1" style="min-width:100px; font-weight:bold;"><option value="expense">지출</option><option value="income">수입</option><option value="transfer">이체/상환</option></select>
                     <input type="number" id="amountInput" placeholder="금액 (원)" value="0" min="0" class="flex-1" style="min-width:100px; font-weight:bold; color:var(--color-expense);">
                 </div>
+                
                 <div class="row-desc-note flex-row mobile-row" style="width: 100%;">
                     <input type="text" id="descInput" list="descHistoryList" autocomplete="off" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
                     <input type="text" id="noteInput" list="noteHistoryList" autocomplete="off" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
                 </div>
-                <div class="row-assets flex-row mobile-row" style="width: 100%; background: var(--bg-highlight); padding: 8px; border-radius: 8px; margin-bottom: 12px;">
-                    <div style="font-size:11px; font-weight:bold; color:var(--color-primary); width:100%; margin-bottom:2px;">자산/부채 연동 (옵션)</div>
-                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
-                        <select id="linkedAsset1" style="flex:1;" title="연동 자산 1">${assetOptions}</select>
-                        <select id="linkedAssetOp1" style="width:45px; padding:0;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
-                    </div>
-                    <div class="flex-1" style="display:flex; gap:2px; min-width:100px;">
-                        <select id="linkedAsset2" style="flex:1;" title="연동 자산 2">${assetOptions}</select>
-                        <select id="linkedAssetOp2" style="width:45px; padding:0;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
+                
+                <div class="row-assets" style="background: var(--bg-highlight); padding: 12px; border-radius: 8px; margin-bottom: 15px; width: 100%;">
+                    <div style="font-size:11px; font-weight:bold; color:var(--color-primary); margin-bottom:8px;">자산/부채 연동 (옵션)</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; flex:1; min-width:140px; gap:4px;">
+                            <select id="linkedAsset1" style="flex:1; height:38px; font-size:13px;" title="연동 자산 1">${assetOptions}</select>
+                            <select id="linkedAssetOp1" style="width:45px; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
+                        </div>
+                        <div style="display:flex; flex:1; min-width:140px; gap:4px;">
+                            <select id="linkedAsset2" style="flex:1; height:38px; font-size:13px;" title="연동 자산 2">${assetOptions}</select>
+                            <select id="linkedAssetOp2" style="width:45px; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
+                        </div>
                     </div>
                 </div>
+                
                 <div class="row-memo" style="width: 100%; margin-bottom:15px;">
                     <div onclick="UIManager.toggleMemo()" style="cursor:pointer; font-size:12px; color:var(--text-title); font-weight:bold; display:flex; align-items:center;">
                         <span id="memoToggleIcon" style="margin-right:5px;">▶</span> 긴 상세 메모 작성하기
@@ -2361,7 +2371,16 @@
             document.getElementById('newAssetType').value = ast.type; document.getElementById('newAssetName').value = ast.name;
             document.getElementById('newAssetBalance').value = ast.baseBalance; document.getElementById('newAssetDate').value = ast.inputDate || '';
             document.getElementById('newAssetMaturity').value = ast.maturityDate || ''; document.getElementById('newAssetRate').value = ast.rate || '';
-            document.getElementById('submitAssetBtn').innerText = '수정 완료'; document.getElementById('cancelAssetEditBtn').style.display = 'inline-flex';
+            
+            // [수정됨] 버튼 Flex 유지
+            const btn = document.getElementById('submitAssetBtn');
+            btn.innerText = '수정 완료';
+            btn.style.display = 'flex';
+            const cancelBtn = document.getElementById('cancelAssetEditBtn');
+            cancelBtn.style.display = 'flex';
+            
+            UIManager.switchTab('tab-assets');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         },
 
         deleteAsset(id) {
@@ -2470,6 +2489,11 @@
             }
         },
 
+        // CSV 추출용 (필터 무시) 함수 - 백업 전용
+        getAllEntriesForBackup() {
+            return [...DataStore.state.entries].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+        },
+
         getFilteredEntries(isSearchActive, searchKeyword) {
             let flt = DataStore.state.entries;
             if (isSearchActive) {
@@ -2496,20 +2520,35 @@
         },
 
         exportToCSV() {
-            const sKw = document.getElementById('searchInput').value.trim().toLowerCase(); const isActive = sKw.length > 0;
-            const fEnt = this.getFilteredEntries(isActive, sKw);
-            if (fEnt.length === 0) { alert('내보낼 데이터 없음'); return; }
+            if (DataStore.isEncrypted) {
+                if(!confirm('⚠️ [보안 경고]\n\n현재 이 앱은 AES-256 암호화 상태입니다. 그러나 CSV 파일로 추출하면 누구나 읽을 수 있는 "평문(Plaintext)" 상태로 저장됩니다.\n\n계속 진행하시겠습니까?')) return;
+            }
+
+            const allEntries = this.getAllEntriesForBackup();
+            if (allEntries.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
+            
             let head = `\uFEFF일자,분류,연동자산1,기호1,연동자산2,기호2,합산제외,통계제외,내용,수입(원),지출(원),비고,상세메모,잔액(원)`;
             DataStore.state.customCols.forEach(col => head += `,${col.name}`);
             let csv = head + '\n';
-            fEnt.forEach(e => {
+            
+            let runningBalance = 0;
+            
+            allEntries.forEach(e => {
+                const inc = e.income || 0; 
+                const exp = e.expense || 0;
+                
+                if (!e.exclude && e.type !== 'transfer') {
+                    runningBalance += (inc - exp);
+                }
+
                 let a1 = DataStore.state.assets.find(a => a.id === e.linkedAsset1); let a2 = DataStore.state.assets.find(a => a.id === e.linkedAsset2);
-                let row = `${e.date||''},${e.type === 'transfer' ? '이체' : (e.income > 0 ? '수입' : '지출')},${a1?.name||''},${e.linkedAssetOp1||''},${a2?.name||''},${e.linkedAssetOp2||''},${e.exclude ? 'O' : 'X'},${e.excludeStatsOnly ? 'O' : 'X'},"${(e.desc||'').replace(/"/g, '""')}",${e.income||0},${e.expense||0},"${(e.note||'').replace(/"/g, '""')}","${(e.memo||'').replace(/"/g, '""')}",${e.runningBalance||0}`;
+                let row = `${e.date||''},${e.type === 'transfer' ? '이체' : (e.income > 0 ? '수입' : '지출')},${a1?.name||''},${e.linkedAssetOp1||''},${a2?.name||''},${e.linkedAssetOp2||''},${e.exclude ? 'O' : 'X'},${e.excludeStatsOnly ? 'O' : 'X'},"${(e.desc||'').replace(/"/g, '""')}",${inc},${exp},"${(e.note||'').replace(/"/g, '""')}","${(e.memo||'').replace(/"/g, '""')}",${runningBalance}`;
+                
                 DataStore.state.customCols.forEach(col => row += `,"${(e.customData?.[col.id]||'').replace(/"/g, '""')}"`);
                 csv += row + '\n';
             });
             
-            const fileName = isActive ? `가계부_내역.csv` : `가계부_${document.getElementById('yearFilter').value}_${document.getElementById('monthFilter').value}.csv`;
+            const fileName = `가계부_전체내역_${Utils.getTodayString()}.csv`;
             
             try {
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -2519,7 +2558,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 기기의 다운로드 폴더에 저장되었습니다.`);
+                alert(`'${fileName}' 파일이 다운로드 되었습니다.\n모든 기간의 데이터가 백업되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
