@@ -298,11 +298,14 @@
             </div>
 
             <div class="box" style="padding: 0; background: transparent; box-shadow: none;">
-                <div class="box-title" style="padding: 0 5px;">
+                <div class="box-title" style="padding: 0 5px; margin-bottom: 10px;">
                     <span>📋 상세 내역</span>
-                    <input type="text" id="searchInput" placeholder="검색..." oninput="UIManager.debouncedRender()" style="width: 120px; height: 30px; font-size: 12px; font-weight: normal;">
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <select id="searchYearFilter" onchange="UIManager.render()" style="display:none; height: 30px; font-size: 11px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--border-input); background: var(--bg-sub); color: var(--text-title); font-weight: bold; width: 85px;"></select>
+                        <input type="text" id="searchInput" placeholder="내역 검색..." oninput="UIManager.debouncedRender()" style="width: 120px; height: 30px; font-size: 12px; font-weight: normal; border: 1px solid var(--border-input); padding: 0 8px; border-radius: 6px;">
+                    </div>
                 </div>
-                <select id="searchYearFilter" onchange="UIManager.render()" style="display:none;"></select>
+                
                 <div class="table-container">
                     <table>
                         <thead id="tableHead"></thead>
@@ -311,6 +314,7 @@
                 </div>
             </div>
         </div>
+
 
         <div id="tab-stats" class="tab-content" data-tab-index="1">
             <div class="box">
@@ -518,8 +522,8 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v6.2 (Data Export Fix)<br>
-                Designed by JM Mentor
+                통합 자산 가계부 System v6.3 (Search & Swipe Polish)<br>
+                Designed by KJM
             </div>
         </div>
 
@@ -541,6 +545,9 @@
     </div>
 </div>
 
+<datalist id="descHistoryList"></datalist>
+<datalist id="noteHistoryList"></datalist>
+
 <script>
     const Utils = {
         escHtml: (str) => {
@@ -560,7 +567,7 @@
     };
 
     // ==========================================
-    // 2. CryptoVault (군사급 암호화 모듈)
+    // 2. CryptoVault 
     // ==========================================
     const CryptoVault = {
         async getDerivationParams(salt) {
@@ -748,9 +755,8 @@
                     localStorage.removeItem('jm_secure_vault');
                 }
 
-                // [신규] 저장이 완료되면 백그라운드에서 구글 드라이브 동기화 시도
                 if(DriveCtrl.isAuthenticated) {
-                    DriveCtrl.uploadToDrive(true); // true = silent mode
+                    DriveCtrl.uploadToDrive(true); 
                 }
 
             } catch (e) {
@@ -791,11 +797,11 @@
     };
 
     // ==========================================
-    // [신규] 4. DriveCtrl (구글 드라이브 동기화 모듈)
+    // 4. DriveCtrl
     // ==========================================
     const DriveCtrl = {
         DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-        SCOPES: 'https://www.googleapis.com/auth/drive.file', // 앱이 생성한 파일에만 접근 권한
+        SCOPES: 'https://www.googleapis.com/auth/drive.file',
         tokenClient: null,
         gapiInited: false,
         gisInited: false,
@@ -812,7 +818,6 @@
                 document.getElementById('driveSetupUI').style.display = 'none';
                 document.getElementById('driveSyncUI').style.display = 'block';
                 
-                // 구글 API 비동기 로딩 대기
                 this.waitForGoogleApis(() => {
                     this.initializeGapiClient(apiKey);
                     this.initializeGisClient(clientId);
@@ -864,7 +869,7 @@
                 this.tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: clientId,
                     scope: this.SCOPES,
-                    callback: '', // defined later
+                    callback: '', 
                 });
                 this.gisInited = true;
                 this.checkAuthStatus();
@@ -875,7 +880,6 @@
 
         checkAuthStatus() {
             if (this.gapiInited && this.gisInited) {
-                // If we already have a valid token in this session
                 const token = gapi.client.getToken();
                 if (token && token.access_token) {
                     this.showAuthorizedUI();
@@ -900,7 +904,6 @@
                     throw (resp);
                 }
                 this.showAuthorizedUI();
-                // 첫 연동 시 드라이브에서 데이터를 찾아보고, 없으면 현재 데이터를 올림
                 const fileId = await this.findFileId();
                 if(!fileId) {
                     alert('연동 성공. 최초 1회 데이터를 클라우드로 백업합니다.');
@@ -955,7 +958,6 @@
             try {
                 if(!isSilent) document.body.style.cursor = 'wait';
                 
-                // 보낼 데이터 준비
                 let backupDataStr = '';
                 if (DataStore.isEncrypted) {
                     backupDataStr = JSON.stringify({ is_secure_vault: true, payload: localStorage.getItem('jm_secure_vault') });
@@ -1016,7 +1018,6 @@
 
                 const preservedPin = AuthCtrl.currentPin;
 
-                // 복원 로직 (파일 업로드 복원과 동일)
                 if (rData.is_secure_vault && rData.payload) {
                     const pin = prompt('클라우드 백업 파일이 암호화되어 있습니다.\n백업 당시의 4자리 PIN 번호를 입력하세요:');
                     if (!pin) { alert('복원이 취소되었습니다.'); return; }
@@ -1192,7 +1193,7 @@
                 if (val === this.currentPin) {
                     this.currentPin = null;
                     DataStore.isEncrypted = false;
-                    await DataStore.save(); // 암호화 해제하여 저장
+                    await DataStore.save(); 
                     sessionStorage.removeItem('jm_app_unlocked');
                     sessionStorage.removeItem('jm_temp_key');
                     alert('보안 해제 완료: 이제 데이터가 평문으로 저장됩니다.');
@@ -1207,7 +1208,7 @@
         async executeMigration() {
             if(DataStore.state.settings) delete DataStore.state.settings.appPin;
             DataStore.isEncrypted = true;
-            await DataStore.save(); // 암호화 후 평문 삭제
+            await DataStore.save(); 
             alert('시스템 보안 업데이트 완료.\n당신의 데이터가 AES-256 규격으로 안전하게 암호화 마이그레이션 되었습니다.');
             AppCtrl.onAppUnlocked();
         },
@@ -1294,6 +1295,7 @@
         touchEndY: 0,
         ignoreSwipe: false,
 
+        // [수정됨] 자동완성 Datalist 최적화
         updateDescDatalist() {
             const descList = document.getElementById('descHistoryList'); 
             const noteList = document.getElementById('noteHistoryList');
@@ -1307,13 +1309,13 @@
             }
         },
 
+        // [수정됨] 상세 내역 테이블 안쪽에서만 스와이프를 무시 (차트는 허용)
         initSwipeEngine() {
             const container = document.getElementById('swipeContainer');
             if (!container) return;
 
             container.addEventListener('touchstart', e => {
-                // 가로 스크롤이 있는 표 영역을 터치했는지 검사
-                const isScrollable = e.target.closest('.table-container') || e.target.closest('.settlement-chart-container');
+                const isScrollable = e.target.closest('.table-container');
                 this.ignoreSwipe = !!isScrollable;
 
                 this.touchStartX = e.changedTouches[0].screenX;
@@ -1321,7 +1323,7 @@
             }, { passive: true });
 
             container.addEventListener('touchend', e => {
-                if (this.ignoreSwipe) return; // 표 안에서 스크롤 중이면 탭 넘김 무시
+                if (this.ignoreSwipe) return; 
 
                 this.touchEndX = e.changedTouches[0].screenX;
                 this.touchEndY = e.changedTouches[0].screenY;
@@ -1368,14 +1370,24 @@
             }, 300);
         },
 
+        // [수정됨] 검색 전용 연도 필터 옵션 초기화
         initFilters() {
             const yearSelect = document.getElementById('yearFilter');
             const searchYearSelect = document.getElementById('searchYearFilter');
             const currentYear = new Date().getFullYear();
+            
             let optionsHtml = '<option value="all">전체</option>';
-            for(let i = 2000; i <= 2100; i++) optionsHtml += `<option value="${i}" ${i === currentYear ? 'selected' : ''}>${i}</option>`;
-            yearSelect.innerHTML = optionsHtml;
-            if(searchYearSelect) searchYearSelect.innerHTML = optionsHtml;
+            let searchOptionsHtml = '<option value="all">전체년도</option>';
+            
+            for(let i = 2000; i <= 2100; i++) {
+                let isSelected = (i === currentYear) ? 'selected' : '';
+                optionsHtml += `<option value="${i}" ${isSelected}>${i}</option>`;
+                searchOptionsHtml += `<option value="${i}">${i}년</option>`;
+            }
+            
+            if(yearSelect) yearSelect.innerHTML = optionsHtml;
+            if(searchYearSelect) searchYearSelect.innerHTML = searchOptionsHtml;
+            
             document.getElementById('monthFilter').value = String(new Date().getMonth() + 1).padStart(2, '0');
             
             const stockMonthInput = document.getElementById('stockMonthInput');
@@ -1455,6 +1467,7 @@
             `).join('');
         },
 
+        // [수정됨] autocomplete 속성 제거 및 버튼 텍스트 최소화
         renderInputForm() {
             const container = document.getElementById('inputFormGroup');
             let assetOptions = '<option value="">자산 선택 안함</option>';
@@ -1477,8 +1490,8 @@
                 </div>
                 
                 <div class="row-desc-note flex-row mobile-row" style="width: 100%;">
-                    <input type="text" id="descInput" list="descHistoryList" autocomplete="off" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
-                    <input type="text" id="noteInput" list="noteHistoryList" autocomplete="off" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
+                    <input type="text" id="descInput" list="descHistoryList" placeholder="내용 (예: 식비)" required class="flex-1" style="min-width:100px;">
+                    <input type="text" id="noteInput" list="noteHistoryList" placeholder="비고 (간단 요약)" class="flex-1" style="min-width:100px;">
                 </div>
                 
                 <div class="row-assets" style="background: var(--bg-highlight); padding: 12px; border-radius: 8px; margin-bottom: 15px; width: 100%;">
@@ -1515,9 +1528,9 @@
                         <label class="checkbox-label"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
                     </div>
                     <div style="display:flex; gap:4px; flex:1; min-width: 140px; justify-content: flex-end;">
-                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">초기화</button>
-                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">취소</button>
-                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2; padding:0 8px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">등록</button>
+                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0; font-size:12px; white-space:nowrap;">[초기화]</button>
+                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0; font-size:12px; white-space:nowrap;">[취소]</button>
+                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2; padding:0; font-size:13px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">[등록]</button>
                     </div>
                 </div>
                 <div id="recurringListContainer" style="width:100%;"></div>
@@ -2103,6 +2116,12 @@
             const searchInput = document.getElementById('searchInput'); const sKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
             const isSearchActive = sKeyword.length > 0;
 
+            // [추가됨] 검색 필터 토글 UI 연동
+            const searchYearSelect = document.getElementById('searchYearFilter');
+            if (searchYearSelect) {
+                searchYearSelect.style.display = isSearchActive ? 'block' : 'none';
+            }
+
             const thead = document.getElementById('tableHead');
             let headHtml = `<tr><th>일자</th><th>분류</th><th>내용</th><th style="text-align:right;">수입</th><th style="text-align:right;">지출</th><th style="text-align: right; padding-right: 15px;">잔액</th><th>비고</th>`;
             DataStore.state.customCols.forEach(col => { headHtml += `<th>${Utils.escHtml(col.name)}</th>`; });
@@ -2372,7 +2391,6 @@
             document.getElementById('newAssetBalance').value = ast.baseBalance; document.getElementById('newAssetDate').value = ast.inputDate || '';
             document.getElementById('newAssetMaturity').value = ast.maturityDate || ''; document.getElementById('newAssetRate').value = ast.rate || '';
             
-            // [수정됨] 버튼 Flex 유지
             const btn = document.getElementById('submitAssetBtn');
             btn.innerText = '수정 완료';
             btn.style.display = 'flex';
@@ -2426,7 +2444,7 @@
                 const idx = DataStore.state.entries.findIndex(e => e.id === UIManager.currentEditId);
                 if(idx !== -1) DataStore.state.entries[idx] = { ...DataStore.state.entries[idx], ...entryData, customData: { ...DataStore.state.entries[idx].customData, ...entryData.customData } };
                 UIManager.currentEditId = null; 
-                document.getElementById('submitBtn').innerText = '등록'; 
+                document.getElementById('submitBtn').innerText = '[등록]'; 
                 document.getElementById('cancelEditBtn').style.display = 'none';
             } else {
                 DataStore.state.entries.push({ id: 'ent_' + Utils.generateID(), ...entryData });
@@ -2454,7 +2472,7 @@
             document.getElementById('repeatType').value = 'none'; UIManager.toggleRepeatDate();
             DataStore.state.customCols.forEach(col => { const inp = document.getElementById(`customInput_${col.id}`); if(inp) inp.value = e.customData?.[col.id] || ''; });
             
-            document.getElementById('submitBtn').innerText = '수정'; 
+            document.getElementById('submitBtn').innerText = '[수정]'; 
             document.getElementById('cancelEditBtn').style.display = 'flex';
             
             UIManager.switchTab('tab-ledger');
@@ -2462,7 +2480,7 @@
         },
         cancelEdit() { 
             UIManager.currentEditId = null; 
-            document.getElementById('submitBtn').innerText = '등록'; 
+            document.getElementById('submitBtn').innerText = '[등록]'; 
             document.getElementById('cancelEditBtn').style.display = 'none'; 
             UIManager.clearInputs(); 
         },
@@ -2489,7 +2507,6 @@
             }
         },
 
-        // CSV 추출용 (필터 무시) 함수 - 백업 전용
         getAllEntriesForBackup() {
             return [...DataStore.state.entries].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
         },
