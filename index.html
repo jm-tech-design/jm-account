@@ -13,6 +13,9 @@
 
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
 
     <style>
         /* === 미니멀리즘 테마 색상 변수 === */
@@ -94,6 +97,7 @@
         
         input, select, .std-btn, textarea { height: 42px; padding: 0 12px; font-size: 14px; border: 1px solid var(--border-input); border-radius: 8px; font-family: inherit; background-color: var(--bg-input); color: var(--text-main); transition: border-color 0.2s; }
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary); background-color: var(--bg-box); }
+        
         .std-btn { background-color: var(--text-title); color: white; border: none; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .util-btn { height: 28px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; }
         .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } .btn-gray { background-color: #dfe6e9; color: #2d3436; }
@@ -124,7 +128,7 @@
         .badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: bold; background: var(--border-light); color: var(--text-muted); }
         .carried-row { background-color: var(--bg-carried); font-weight: bold; }
 
-        .settlement-chart-container { display: flex; height: 110px; align-items: flex-end; justify-content: space-around; gap: 2px; padding-top: 10px; border-bottom: 1px solid var(--border-light); margin-bottom: 10px; }
+        .settlement-chart-container { display: flex; height: 110px; align-items: flex-end; justify-content: space-around; gap: 2px; padding-top: 10px; border-bottom: 1px solid var(--border-light); margin-bottom: 10px; overflow-x: auto; }
         .settlement-bar-group { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0; }
         .settlement-bars { display: flex; width: 100%; justify-content: center; gap: 1px; height: 100%; align-items: flex-end; }
         .settlement-bar-inc, .settlement-bar-exp { width: 40%; min-height: 1px; border-radius: 2px 2px 0 0; }
@@ -455,8 +459,41 @@
             </div>
 
             <div class="box">
-                <div class="box-title" style="color: var(--color-expense);">💾 데이터 백업 및 복원 (중요)</div>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">안전한 곳에 주기적으로 데이터를 백업하십시오. 데이터는 서버가 아닌 <strong>오직 이 브라우저</strong>에만 보관되므로 캐시 삭제 시 소멸될 수 있습니다.</p>
+                <div class="box-title" style="color: var(--color-income);">☁️ 클라우드 동기화 (Google Drive)</div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">기기 분실에 대비해 암호화된 데이터를 구글 드라이브에 안전하게 동기화합니다. 연동을 위해서는 직접 발급받은 API 키가 필요합니다.</p>
+
+                <div id="driveSetupUI">
+                    <div class="flex-row mobile-row" style="margin-bottom: 8px;">
+                        <input type="text" id="gapiClientId" placeholder="Google Client ID 입력" class="flex-1" style="font-size:11px;">
+                    </div>
+                    <div class="flex-row mobile-row" style="margin-bottom: 8px;">
+                        <input type="text" id="gapiApiKey" placeholder="Google API Key 입력" class="flex-1" style="font-size:11px;">
+                    </div>
+                    <button class="std-btn bg-gray" style="width: 100%; margin-bottom: 5px;" onclick="DriveCtrl.saveCredentials()">API 연동 키 저장</button>
+                </div>
+
+                <div id="driveSyncUI" style="display:none; text-align: center;">
+                    <div style="font-size: 12px; font-weight: bold; color: var(--color-income); margin-bottom: 15px;">✅ API 키가 저장되었습니다.</div>
+                    <button id="btnAuthorize" class="std-btn bg-blue" style="width: 100%; margin-bottom: 10px;" onclick="DriveCtrl.handleAuthClick()">구글 계정 로그인 및 권한 부여</button>
+                    
+                    <div id="driveActionButtons" style="display:none;">
+                        <div style="font-size:11px; color:var(--color-primary); font-weight:bold; margin-bottom:10px;">🟢 구글 드라이브와 연결됨</div>
+                        <div class="flex-row mobile-row" style="margin-bottom: 0;">
+                            <button class="std-btn bg-primary flex-1" onclick="DriveCtrl.uploadToDrive()">강제 백업 업로드</button>
+                            <button class="std-btn bg-warning flex-1" style="background:var(--color-warning); color:white;" onclick="DriveCtrl.downloadFromDrive()">드라이브에서 복원</button>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; text-align: right;">
+                        <button class="util-btn btn-gray" onclick="DriveCtrl.clearCredentials()">키 초기화</button>
+                        <button id="btnSignout" class="util-btn btn-del" style="display:none;" onclick="DriveCtrl.handleSignoutClick()">로그아웃</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="box-title" style="color: var(--color-expense);">💾 오프라인 파일 백업 및 복원</div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">기기 내부에 다운로드 폴더로 파일을 추출하여 수동으로 백업합니다.</p>
                 <div class="flex-row mobile-row">
                     <button class="std-btn btn-gray flex-1 btn-fixed" onclick="AppCtrl.backupData()">전체 데이터 백업 (.txt)</button>
                     <button class="std-btn btn-gray flex-1 btn-fixed" onclick="document.getElementById('restoreInput').click()">백업 데이터 복원</button>
@@ -464,7 +501,7 @@
                 </div>
                 <div class="flex-row mobile-row" style="margin-top: 10px; margin-bottom: 0;">
                     <button class="std-btn btn-gray flex-1 btn-fixed" onclick="AppCtrl.exportToCSV()">현재 목록 CSV 내보내기</button>
-                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="document.getElementById('importCsvInput').click()">CSV 불러오기</button>
+                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="document.getElementById('importCsvInput').click()">CSV 엑셀 불러오기</button>
                     <input type="file" id="importCsvInput" style="display:none;" accept=".csv" onchange="AppCtrl.importFromCSV(event)">
                 </div>
             </div>
@@ -479,7 +516,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v5.5 (Final Polish)<br>
+                통합 자산 가계부 System v6.1 (UX Polished)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -500,8 +537,7 @@
             <span class="tab-icon">⚙️</span><span>설정</span>
         </div>
     </div>
-</div> <datalist id="descHistoryList"></datalist>
-<datalist id="noteHistoryList"></datalist>
+</div>
 
 <script>
     const Utils = {
@@ -522,7 +558,7 @@
     };
 
     // ==========================================
-    // 2. CryptoVault
+    // 2. CryptoVault 
     // ==========================================
     const CryptoVault = {
         async getDerivationParams(salt) {
@@ -709,6 +745,11 @@
                     
                     localStorage.removeItem('jm_secure_vault');
                 }
+
+                if(DriveCtrl.isAuthenticated) {
+                    DriveCtrl.uploadToDrive(true); 
+                }
+
             } catch (e) {
                 console.error("Save error:", e);
                 if (e.name === 'QuotaExceededError') alert('⚠️ 브라우저 저장 공간 초과. 데이터를 백업 후 정리하십시오.');
@@ -747,7 +788,282 @@
     };
 
     // ==========================================
-    // 4. AuthCtrl
+    // 4. DriveCtrl (구글 드라이브 동기화 모듈)
+    // ==========================================
+    const DriveCtrl = {
+        DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+        SCOPES: 'https://www.googleapis.com/auth/drive.file',
+        tokenClient: null,
+        gapiInited: false,
+        gisInited: false,
+        isAuthenticated: false,
+        fileName: 'jm_account_secure_backup.json',
+
+        init() {
+            const clientId = localStorage.getItem('jm_gapi_client_id');
+            const apiKey = localStorage.getItem('jm_gapi_api_key');
+            
+            if (clientId && apiKey) {
+                document.getElementById('gapiClientId').value = clientId;
+                document.getElementById('gapiApiKey').value = apiKey;
+                document.getElementById('driveSetupUI').style.display = 'none';
+                document.getElementById('driveSyncUI').style.display = 'block';
+                
+                this.waitForGoogleApis(() => {
+                    this.initializeGapiClient(apiKey);
+                    this.initializeGisClient(clientId);
+                });
+            }
+        },
+
+        waitForGoogleApis(callback) {
+            const check = setInterval(() => {
+                if (window.gapi && window.google) {
+                    clearInterval(check);
+                    callback();
+                }
+            }, 100);
+        },
+
+        saveCredentials() {
+            const clientId = document.getElementById('gapiClientId').value.trim();
+            const apiKey = document.getElementById('gapiApiKey').value.trim();
+            if(!clientId || !apiKey) { alert('Client ID와 API Key를 모두 입력해야 합니다.'); return; }
+            
+            localStorage.setItem('jm_gapi_client_id', clientId);
+            localStorage.setItem('jm_gapi_api_key', apiKey);
+            alert('키가 저장되었습니다. 다시 접속하거나 동기화 버튼을 눌러주세요.');
+            location.reload();
+        },
+
+        clearCredentials() {
+            if(!confirm('저장된 구글 연동 키를 삭제하시겠습니까? (드라이브의 데이터는 삭제되지 않습니다)')) return;
+            localStorage.removeItem('jm_gapi_client_id');
+            localStorage.removeItem('jm_gapi_api_key');
+            location.reload();
+        },
+
+        async initializeGapiClient(apiKey) {
+            try {
+                await new Promise((resolve) => gapi.load('client', resolve));
+                await gapi.client.init({ apiKey: apiKey, discoveryDocs: [this.DISCOVERY_DOC] });
+                this.gapiInited = true;
+                this.checkAuthStatus();
+            } catch (e) {
+                console.error("GAPI Init Error:", e);
+                alert('구글 API 초기화 실패. API Key가 정확한지 확인하십시오.');
+            }
+        },
+
+        initializeGisClient(clientId) {
+            try {
+                this.tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: clientId,
+                    scope: this.SCOPES,
+                    callback: '', 
+                });
+                this.gisInited = true;
+                this.checkAuthStatus();
+            } catch (e) {
+                console.error("GIS Init Error:", e);
+            }
+        },
+
+        checkAuthStatus() {
+            if (this.gapiInited && this.gisInited) {
+                const token = gapi.client.getToken();
+                if (token && token.access_token) {
+                    this.showAuthorizedUI();
+                }
+            }
+        },
+
+        showAuthorizedUI() {
+            this.isAuthenticated = true;
+            document.getElementById('btnAuthorize').style.display = 'none';
+            document.getElementById('btnSignout').style.display = 'inline-block';
+            document.getElementById('driveActionButtons').style.display = 'block';
+        },
+
+        handleAuthClick() {
+            if(!this.gapiInited || !this.gisInited) {
+                alert('구글 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            this.tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw (resp);
+                }
+                this.showAuthorizedUI();
+                const fileId = await this.findFileId();
+                if(!fileId) {
+                    alert('연동 성공. 최초 1회 데이터를 클라우드로 백업합니다.');
+                    this.uploadToDrive(false);
+                } else {
+                    alert('연동 성공. 기존 백업본이 발견되었습니다. 필요시 수동으로 복원하세요.');
+                }
+            };
+
+            if (gapi.client.getToken() === null) {
+                this.tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                this.tokenClient.requestAccessToken({prompt: ''});
+            }
+        },
+
+        handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token, () => {
+                    gapi.client.setToken('');
+                    this.isAuthenticated = false;
+                    document.getElementById('btnAuthorize').style.display = 'block';
+                    document.getElementById('btnSignout').style.display = 'none';
+                    document.getElementById('driveActionButtons').style.display = 'none';
+                });
+            }
+        },
+
+        async findFileId() {
+            try {
+                let response = await gapi.client.drive.files.list({
+                    q: `name='${this.fileName}' and trashed=false`,
+                    spaces: 'drive',
+                    fields: 'files(id, name, modifiedTime)'
+                });
+                const files = response.result.files;
+                if (files && files.length > 0) return files[0].id;
+                return null;
+            } catch (e) {
+                console.error('File search error:', e);
+                return null;
+            }
+        },
+
+        async uploadToDrive(isSilent = false) {
+            if (!this.isAuthenticated) {
+                if(!isSilent) alert('먼저 구글 계정에 로그인해야 합니다.');
+                return;
+            }
+
+            try {
+                if(!isSilent) document.body.style.cursor = 'wait';
+                
+                let backupDataStr = '';
+                if (DataStore.isEncrypted) {
+                    backupDataStr = JSON.stringify({ is_secure_vault: true, payload: localStorage.getItem('jm_secure_vault') });
+                } else {
+                    backupDataStr = JSON.stringify(DataStore.state);
+                }
+
+                const fileContent = new Blob([backupDataStr], {type: 'application/json'});
+                const fileId = await this.findFileId();
+                
+                const metadata = { name: this.fileName, mimeType: 'application/json' };
+                
+                let accessToken = gapi.client.getToken().access_token;
+                let form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', fileContent);
+
+                let url = fileId 
+                    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart` 
+                    : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+                
+                let fetchOptions = {
+                    method: fileId ? 'PATCH' : 'POST',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                    body: form
+                };
+
+                let response = await fetch(url, fetchOptions);
+                if (!response.ok) throw new Error('Upload failed');
+                
+                if(!isSilent) {
+                    document.body.style.cursor = 'default';
+                    alert('구글 드라이브 클라우드에 성공적으로 백업되었습니다.');
+                }
+            } catch(e) {
+                document.body.style.cursor = 'default';
+                console.error(e);
+                if(!isSilent) alert('업로드 중 오류가 발생했습니다.');
+            }
+        },
+
+        async downloadFromDrive() {
+            if (!this.isAuthenticated) { alert('먼저 구글 계정에 로그인해야 합니다.'); return; }
+            if (!confirm('클라우드 데이터를 기기로 덮어씌웁니다. 진행하시겠습니까?')) return;
+
+            try {
+                document.body.style.cursor = 'wait';
+                const fileId = await this.findFileId();
+                if (!fileId) {
+                    document.body.style.cursor = 'default';
+                    alert('클라우드에 백업된 파일이 없습니다.');
+                    return;
+                }
+
+                let response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                const rData = response.result;
+                document.body.style.cursor = 'default';
+
+                const preservedPin = AuthCtrl.currentPin;
+
+                if (rData.is_secure_vault && rData.payload) {
+                    const pin = prompt('클라우드 백업 파일이 암호화되어 있습니다.\n백업 당시의 4자리 PIN 번호를 입력하세요:');
+                    if (!pin) { alert('복원이 취소되었습니다.'); return; }
+                    
+                    try {
+                        const decryptedState = await CryptoVault.decrypt(rData.payload, pin);
+                        DataStore.state = decryptedState;
+                        AuthCtrl.currentPin = pin;
+                        DataStore.isEncrypted = true;
+                        await DataStore.save();
+                        sessionStorage.setItem('jm_app_unlocked', 'true');
+                        sessionStorage.setItem('jm_temp_key', pin);
+                        alert('클라우드 복원 완료. 페이지를 새로고침합니다.');
+                        location.reload();
+                    } catch(err) {
+                        alert('PIN 번호가 틀렸거나 파일이 손상되었습니다.');
+                        return;
+                    }
+                } else {
+                    if (rData && typeof rData === 'object') {
+                        const _entries = Array.isArray(rData.entries) ? rData.entries : (Array.isArray(rData) ? rData : []);
+                        const _customCols = Array.isArray(rData.customCols) ? rData.customCols : [];
+                        const _assets = Array.isArray(rData.assets) ? rData.assets : [];
+                        const _recurring = Array.isArray(rData.recurringTasks) ? rData.recurringTasks : [];
+                        const _stocks = Array.isArray(rData.stockRecords) ? rData.stockRecords : [];
+                        const _stockAcc = Array.isArray(rData.stockAccounts) ? rData.stockAccounts : [];
+                        const _subscriptions = Array.isArray(rData.subscriptions) ? rData.subscriptions : [];
+                        const _memos = typeof rData.monthlyMemos === 'object' && rData.monthlyMemos !== null ? rData.monthlyMemos : {};
+                        const _settings = typeof rData.settings === 'object' && rData.settings !== null ? rData.settings : {};
+                        
+                        if (preservedPin && !DataStore.isEncrypted) { _settings.appPin = preservedPin; }
+                        
+                        DataStore.state = {
+                            entries: _entries, customCols: _customCols, assets: _assets, recurringTasks: _recurring,
+                            stockRecords: _stocks, stockAccounts: _stockAcc, subscriptions: _subscriptions,
+                            monthlyMemos: _memos, settings: _settings
+                        };
+                        
+                        localStorage.removeItem('jm_secure_vault'); 
+                        await DataStore.save();
+                        alert('클라우드 복원 완료. 페이지를 새로고침합니다.'); location.reload(); 
+                    } else {
+                        alert('지원하지 않는 백업 파일 형식입니다.');
+                    }
+                }
+            } catch(e) {
+                document.body.style.cursor = 'default';
+                console.error(e);
+                alert('다운로드 중 오류가 발생했습니다.');
+            }
+        }
+    };
+
+    // ==========================================
+    // 5. AuthCtrl 
     // ==========================================
     const AuthCtrl = {
         mode: 'unlock', 
@@ -951,7 +1267,7 @@
     };
 
     // ==========================================
-    // 5. UIManager (수정된 렌더링 로직)
+    // 6. UIManager (수정된 스와이프 로직 탑재)
     // ==========================================
     const UIManager = {
         currentEditId: null,
@@ -968,6 +1284,7 @@
         touchEndX: 0,
         touchStartY: 0,
         touchEndY: 0,
+        ignoreSwipe: false,
 
         // [수정됨] 자동완성 Datalist에 명시적 닫는 태그 주입
         updateDescDatalist() {
@@ -983,16 +1300,23 @@
             }
         },
 
+        // [수정됨] 스와이프 충돌 방지 로직 (이벤트 위임)
         initSwipeEngine() {
             const container = document.getElementById('swipeContainer');
             if (!container) return;
 
             container.addEventListener('touchstart', e => {
+                // 가로 스크롤이 있는 표 영역을 터치했는지 검사
+                const isScrollable = e.target.closest('.table-container') || e.target.closest('.settlement-chart-container');
+                this.ignoreSwipe = !!isScrollable;
+
                 this.touchStartX = e.changedTouches[0].screenX;
                 this.touchStartY = e.changedTouches[0].screenY;
             }, { passive: true });
 
             container.addEventListener('touchend', e => {
+                if (this.ignoreSwipe) return; // 표 안에서 스크롤 중이면 탭 넘김 무시
+
                 this.touchEndX = e.changedTouches[0].screenX;
                 this.touchEndY = e.changedTouches[0].screenY;
                 this.handleSwipe();
@@ -1185,10 +1509,10 @@
                         <label class="checkbox-label"><input type="checkbox" id="excludeStatsOnlyInput"> 차트 통계에서만 제외</label>
                         <label class="checkbox-label"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
                     </div>
-                    <div style="display:flex; gap:6px; flex:1; min-width: 160px; justify-content: flex-end;">
-                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1;">초기화</button>
-                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1;">취소</button>
-                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2;" onclick="AppCtrl.submitEntry()">등록</button>
+                    <div style="display:flex; gap:4px; flex:1; min-width: 140px; justify-content: flex-end;">
+                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0 4px; font-size:12px; white-space:nowrap;">초기화</button>
+                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0 4px; font-size:12px; white-space:nowrap;">취소</button>
+                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2; padding:0 8px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">등록</button>
                     </div>
                 </div>
                 <div id="recurringListContainer" style="width:100%;"></div>
@@ -2042,15 +2366,7 @@
             document.getElementById('newAssetType').value = ast.type; document.getElementById('newAssetName').value = ast.name;
             document.getElementById('newAssetBalance').value = ast.baseBalance; document.getElementById('newAssetDate').value = ast.inputDate || '';
             document.getElementById('newAssetMaturity').value = ast.maturityDate || ''; document.getElementById('newAssetRate').value = ast.rate || '';
-            
-            const btn = document.getElementById('submitAssetBtn');
-            btn.innerText = '수정 완료';
-            btn.style.display = 'flex';
-            const cancelBtn = document.getElementById('cancelAssetEditBtn');
-            cancelBtn.style.display = 'flex';
-            
-            UIManager.switchTab('tab-assets');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('submitAssetBtn').innerText = '수정 완료'; document.getElementById('cancelAssetEditBtn').style.display = 'inline-flex';
         },
 
         deleteAsset(id) {
@@ -2096,6 +2412,8 @@
                 const idx = DataStore.state.entries.findIndex(e => e.id === UIManager.currentEditId);
                 if(idx !== -1) DataStore.state.entries[idx] = { ...DataStore.state.entries[idx], ...entryData, customData: { ...DataStore.state.entries[idx].customData, ...entryData.customData } };
                 UIManager.currentEditId = null; 
+                
+                // [수정됨] 편집 종료 시 버튼 원상복구
                 document.getElementById('submitBtn').innerText = '등록'; 
                 document.getElementById('cancelEditBtn').style.display = 'none';
             } else {
@@ -2124,6 +2442,7 @@
             document.getElementById('repeatType').value = 'none'; UIManager.toggleRepeatDate();
             DataStore.state.customCols.forEach(col => { const inp = document.getElementById(`customInput_${col.id}`); if(inp) inp.value = e.customData?.[col.id] || ''; });
             
+            // [수정됨] 편집 모드 진입 시 버튼 UI 변경
             document.getElementById('submitBtn').innerText = '수정'; 
             document.getElementById('cancelEditBtn').style.display = 'flex';
             
