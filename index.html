@@ -99,7 +99,8 @@
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary); background-color: var(--bg-box); }
         
         .std-btn { display: flex; align-items: center; justify-content: center; background-color: var(--text-title); color: white; border: none; cursor: pointer; font-weight: bold; font-size: 14px; border-radius: 8px; }
-        .util-btn { height: 28px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        /* [수정됨] util-btn 레이아웃 강제 교정 (세로 텍스트 방지) */
+        .util-btn { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 10px; font-size: 11px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
         .btn-edit { background-color: #b2bec3; color: #2d3436; } .btn-del { background-color: #ff7675; } 
         .btn-gray { background-color: var(--border-light); color: var(--text-main); }
         
@@ -110,7 +111,7 @@
         .bg-gray { background-color: var(--border-light); color: var(--text-main); }
         .bg-danger { background-color: var(--color-expense) !important; color: white !important;}
         
-        .checkbox-label { font-size: 13px; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); cursor: pointer; }
+        .checkbox-label { font-size: 12px; display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--text-main); cursor: pointer; }
 
         .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
         .summary-card { background: var(--bg-box); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: center; }
@@ -367,8 +368,15 @@
                         <input type="number" id="newAssetBalance" placeholder="초기 잔액 (원)" class="flex-1">
                         <input type="number" step="0.01" id="newAssetRate" placeholder="이율 (%)" class="flex-1" style="max-width: 80px;">
                     </div>
-                    <div class="flex-row mobile-row" style="display: none;">
-                        <input type="date" id="newAssetDate"><input type="date" id="newAssetMaturity">
+                    <div class="flex-row mobile-row">
+                        <div class="flex-1" style="display:flex; flex-direction:column; gap:4px;">
+                            <label style="font-size:10px; color:var(--text-muted); font-weight:bold;">개설/최근거래 일자</label>
+                            <input type="date" id="newAssetDate" style="width:100%;">
+                        </div>
+                        <div class="flex-1" style="display:flex; flex-direction:column; gap:4px;">
+                            <label style="font-size:10px; color:var(--text-muted); font-weight:bold;">만기일자 (선택)</label>
+                            <input type="date" id="newAssetMaturity" style="width:100%;">
+                        </div>
                     </div>
                     <div class="flex-row mobile-row" style="margin-bottom: 0;">
                         <button id="submitAssetBtn" class="std-btn bg-primary flex-1 btn-fixed" onclick="AppCtrl.addAsset()">추가하기</button>
@@ -506,7 +514,7 @@
                     <input type="file" id="restoreInput" style="display:none;" accept=".json, .txt, text/*, application/json, */*" onchange="AppCtrl.restoreData(event)">
                 </div>
                 <div class="flex-row mobile-row" style="margin-top: 10px; margin-bottom: 0;">
-                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="AppCtrl.exportToCSV()">현재 목록 CSV 내보내기</button>
+                    <button class="std-btn btn-gray flex-1 btn-fixed" onclick="AppCtrl.exportToCSV()">모든 내역 CSV 내보내기</button>
                     <button class="std-btn btn-gray flex-1 btn-fixed" onclick="document.getElementById('importCsvInput').click()">CSV 엑셀 불러오기</button>
                     <input type="file" id="importCsvInput" style="display:none;" accept=".csv, text/csv, text/plain, application/vnd.ms-excel, */*" onchange="AppCtrl.importFromCSV(event)">
                 </div>
@@ -522,8 +530,8 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v6.4 (UX Perfected)<br>
-                Designed by KJM
+                통합 자산 가계부 System v6.5 (Perfect Balance)<br>
+                Designed by JM Mentor
             </div>
         </div>
 
@@ -1494,12 +1502,12 @@
                     <div style="font-size:11px; font-weight:bold; color:var(--color-primary); margin-bottom:8px;">자산/부채 연동 (옵션)</div>
                     <div style="display:flex; flex-wrap:wrap; gap:10px;">
                         <div style="display:flex; flex:1; min-width:140px; gap:4px;">
-                            <select id="linkedAsset1" style="flex:1; height:38px; font-size:13px;" title="연동 자산 1">${assetOptions}</select>
-                            <select id="linkedAssetOp1" style="width:45px; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
+                            <select id="linkedAsset1" style="flex:1; width:0; min-width:0; text-overflow:ellipsis; height:38px; font-size:13px;" title="연동 자산 1">${assetOptions}</select>
+                            <select id="linkedAssetOp1" style="width:45px; flex-shrink:0; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="-">-</option><option value="+">+</option></select>
                         </div>
                         <div style="display:flex; flex:1; min-width:140px; gap:4px;">
-                            <select id="linkedAsset2" style="flex:1; height:38px; font-size:13px;" title="연동 자산 2">${assetOptions}</select>
-                            <select id="linkedAssetOp2" style="width:45px; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
+                            <select id="linkedAsset2" style="flex:1; width:0; min-width:0; text-overflow:ellipsis; height:38px; font-size:13px;" title="연동 자산 2">${assetOptions}</select>
+                            <select id="linkedAssetOp2" style="width:45px; flex-shrink:0; height:38px; padding:0; text-align:center;" title="잔액 증감 방향"><option value="+">+</option><option value="-">-</option></select>
                         </div>
                     </div>
                 </div>
@@ -1521,12 +1529,12 @@
                 <div class="row-submit flex-row" style="width: 100%; justify-content: space-between; align-items: center; margin-top: 5px;">
                     <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px;">
                         <label class="checkbox-label"><input type="checkbox" id="excludeStatsOnlyInput"> 차트 통계에서만 제외</label>
-                        <label class="checkbox-label"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
+                        <label class="checkbox-label"><input type="checkbox" id="excludeInput"> 자산+통계 완전 제외</label>
                     </div>
-                    <div style="display:flex; gap:4px; flex:1; min-width: 140px; justify-content: flex-end;">
-                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">초기화</button>
-                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">취소</button>
-                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2; padding:0 8px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">등록</button>
+                    <div style="display:flex; gap:6px; flex:1; justify-content: flex-end; align-items: stretch;">
+                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="padding:0 12px; font-size:13px; white-space:nowrap;">[초기화]</button>
+                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; padding:0 12px; font-size:13px; white-space:nowrap;">[취소]</button>
+                        <button id="submitBtn" class="std-btn bg-primary" style="flex:1; padding:0 12px; font-size:14px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">[등록]</button>
                     </div>
                 </div>
                 <div id="recurringListContainer" style="width:100%;"></div>
@@ -2134,19 +2142,22 @@
             if(document.getElementById('periodLabelNet')) document.getElementById('periodLabelNet').innerText = pLabel;
 
             let filterStartDate = (!isSearchActive && yf !== 'all' && mf !== 'all') ? `${yf}-${mf.padStart(2, '0')}-01` : null;
-            let yearStart = (!isSearchActive && yf !== 'all') ? `${yf}-01-01` : '0000-00-00';
-
-            let carriedBalance = 0; let currentBalance = 0;
+            
+            // [수정됨] 과거 내역 수정 시 모든 잔액을 재계산하기 위한 누적 잔액(Global Balance) 엔진 이식
+            let globalBalance = 0;
+            let carriedBalance = 0;
+            
             DataStore.state.entries.forEach(e => {
                 const inc = e.income || 0; const exp = e.expense || 0;
                 if (!e.exclude && e.type !== 'transfer') {
-                    if (isSearchActive) currentBalance += (inc - exp);
-                    else if (e.date >= yearStart) {
-                        if (filterStartDate && e.date < filterStartDate) carriedBalance += (inc - exp);
-                        currentBalance += (inc - exp);
+                    globalBalance += (inc - exp);
+                    
+                    // 필터 시작일 이전의 모든 내역을 합산하여 정확한 이월 잔액 도출
+                    if (!isSearchActive && filterStartDate && e.date < filterStartDate) {
+                        carriedBalance = globalBalance;
                     }
                 }
-                if (isSearchActive || e.date >= yearStart) e.runningBalance = currentBalance; 
+                e.runningBalance = globalBalance; 
             });
 
             let tbodyContent = '';
@@ -2161,6 +2172,7 @@
             filteredEntries.forEach(entry => {
                 const inc = entry.income || 0; const exp = entry.expense || 0; const tAmt = entry.amount || Math.max(inc, exp) || 0;
                 if (!entry.exclude && (isSearchActive || !entry.excludeStatsOnly) && entry.type !== 'transfer') { periodIncome += inc; periodExpense += exp; }
+                
                 let dispBal = entry.runningBalance || 0;
                 if (isSearchActive && !entry.exclude && entry.type !== 'transfer') dispBal = (searchRunningBalance += (inc - exp));
 
@@ -2189,6 +2201,8 @@
 
             const pNet = periodIncome - periodExpense; const nbEl = document.getElementById('sumNetBalance');
             if(nbEl) { nbEl.innerText = pNet.toLocaleString(); nbEl.className = 'value ' + (pNet > 0 ? 'text-blue' : (pNet < 0 ? 'text-red' : '')); }
+            
+            // [수정됨] 이월 잔액(carriedBalance)이 과거 전체 누적값을 반영함
             if(document.getElementById('carriedBalance')) document.getElementById('carriedBalance').innerText = carriedBalance.toLocaleString();
             if(document.getElementById('sumIncome')) document.getElementById('sumIncome').innerText = periodIncome.toLocaleString();
             if(document.getElementById('sumExpense')) document.getElementById('sumExpense').innerText = periodExpense.toLocaleString();
@@ -2502,6 +2516,7 @@
             }
         },
 
+        // [수정됨] 화면의 필터(연도/월)를 완전히 무시하고 원본 데이터를 100% 추출하는 우회 엔진 이식
         getAllEntriesForBackup() {
             return [...DataStore.state.entries].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
         },
@@ -2533,9 +2548,10 @@
 
         exportToCSV() {
             if (DataStore.isEncrypted) {
-                if(!confirm('⚠️ [보안 경고]\n\n현재 이 앱은 AES-256 암호화 상태입니다. 그러나 CSV 파일로 추출하면 누구나 읽을 수 있는 "평문(Plaintext)" 상태로 저장됩니다.\n\n계속 진행하시겠습니까?')) return;
+                if(!confirm('⚠️ [보안 경고]\n\n현재 이 앱은 AES-256 암호화 상태입니다. 그러나 CSV 파일로 추출하면 누구나 읽을 수 있는 "평문(Plaintext)" 상태로 기기에 저장됩니다.\n\n계속 진행하시겠습니까?')) return;
             }
 
+            // 화면에 보이는 데이터가 아닌 전체 백업용 100% 데이터를 호출
             const allEntries = this.getAllEntriesForBackup();
             if (allEntries.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
             
@@ -2570,7 +2586,7 @@
                 document.body.appendChild(link); 
                 link.click(); 
                 document.body.removeChild(link);
-                alert(`'${fileName}' 파일이 다운로드 되었습니다.\n모든 기간의 데이터가 백업되었습니다.`);
+                alert(`'${fileName}' 파일이 다운로드 되었습니다.\n모든 기간의 데이터가 100% 백업되었습니다.`);
             } catch(e) {
                 alert('파일 다운로드 중 오류가 발생했습니다.');
             }
