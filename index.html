@@ -110,7 +110,7 @@
         .bg-gray { background-color: var(--border-light); color: var(--text-main); }
         .bg-danger { background-color: var(--color-expense) !important; color: white !important;}
         
-        .checkbox-label { font-size: 12px; display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--text-main); cursor: pointer; }
+        .checkbox-label { font-size: 13px; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); cursor: pointer; }
 
         .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
         .summary-card { background: var(--bg-box); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: center; }
@@ -222,7 +222,7 @@
             
             <div class="summary-grid">
                 <div class="summary-card main">
-                    <div class="label" id="sumBalanceText">최종 잔액 (전체)</div>
+                    <div class="label" id="sumBalanceText">최종 잔액</div>
                     <div class="value" id="sumBalance">0</div>
                 </div>
                 <div class="summary-card">
@@ -314,7 +314,6 @@
                 </div>
             </div>
         </div>
-
 
         <div id="tab-stats" class="tab-content" data-tab-index="1">
             <div class="box">
@@ -539,7 +538,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v7.0 (Ultimate Edit)<br>
+                통합 자산 가계부 System v8.0 (Legacy Ghost Fix)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -584,7 +583,7 @@
     };
 
     // ==========================================
-    // 2. CryptoVault 
+    // 2. CryptoVault
     // ==========================================
     const CryptoVault = {
         async getDerivationParams(salt) {
@@ -696,13 +695,12 @@
                     changed = true;
                 }
                 
-                // [수정됨] 과거 데이터 유령화(Ghost Data) 방지를 위한 강제 ID 이식 알고리즘
                 this.state.entries.forEach(e => {
                     if (!e.id) { e.id = 'ent_' + Utils.generateID(); changed = true; }
                     if (e.amount === undefined) { e.amount = Math.max(e.income || 0, e.expense || 0); changed = true; }
                     if (e.linkedAsset && !e.linkedAsset1) {
                         e.linkedAsset1 = e.linkedAsset;
-                        const ast = this.state.assets.find(a => a.id === e.linkedAsset);
+                        const ast = this.state.assets.find(a => String(a.id) === String(e.linkedAsset));
                         if (ast) e.linkedAssetOp1 = (ast.type === 'asset') ? (e.income > 0 ? '+' : '-') : (e.expense > 0 ? '+' : '-');
                         else e.linkedAssetOp1 = '-';
                         delete e.linkedAsset; changed = true;
@@ -1541,11 +1539,11 @@
                 <div class="row-submit flex-row" style="width: 100%; justify-content: space-between; align-items: stretch; margin-top: 5px;">
                     <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; justify-content: center;">
                         <label class="checkbox-label"><input type="checkbox" id="excludeStatsOnlyInput"> 차트 통계에서만 제외</label>
-                        <label class="checkbox-label"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
+                        <label class="checkbox-label"><input type="checkbox" id="excludeInput"> 자산+통계 완전 제외</label>
                     </div>
                     <div style="display:flex; gap:4px; flex:1; min-width: 140px; justify-content: flex-end;">
-                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">[초기화]</button>
-                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">[취소]</button>
+                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0; font-size:12px; white-space:nowrap;">[초기화]</button>
+                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0; font-size:12px; white-space:nowrap;">[취소]</button>
                         <button id="submitBtn" class="std-btn bg-primary" style="flex:2; padding:0 8px; font-size:13px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">[등록]</button>
                     </div>
                 </div>
@@ -1774,7 +1772,7 @@
                         <div style="font-size:10px; color:var(--color-warning);">연 환산: ${Math.floor(yearlyEquivalent).toLocaleString()}원</div>
                     </div>
                     <div>
-                        <button class="util-btn btn-gray" onclick="AppCtrl.deleteSubscription('${sub.id}')">삭제</button>
+                        <button class="util-btn btn-gray" onclick="AppCtrl.deleteSubscription('${String(sub.id)}')">삭제</button>
                     </div>
                 </li>`;
             });
@@ -1850,7 +1848,7 @@
                     <td style="text-align:right; color:${returnColor};"><span class="num-wrap">${monthlyProfit > 0 ? '+' : ''}${monthlyProfit.toLocaleString()}</span></td>
                     <td style="text-align:center; color:${returnColor}; font-weight:800;">${returnSign}${monthlyReturn.toFixed(2)}%</td>
                     <td style="text-align:center; color:${cumReturnColor}; font-weight:900;">${cumReturnSign}${cumulativeReturn.toFixed(2)}%</td>
-                    <td><button class="util-btn btn-gray" onclick="AppCtrl.deleteStockRecord('${rec.id}')">삭제</button></td>
+                    <td><button class="util-btn btn-gray" onclick="AppCtrl.deleteStockRecord('${String(rec.id)}')">삭제</button></td>
                 </tr>` + html;
             });
 
@@ -2161,7 +2159,6 @@
             let tempYearlyBalance = 0;
             let lastYear = '';
 
-            // [수정됨] 최종 잔액 UI 동적 표기
             const sumBalLabel = document.getElementById('sumBalanceText');
             if (sumBalLabel) {
                 sumBalLabel.innerText = resetYearly ? '최종 잔액 (올해)' : '최종 잔액 (전체)';
@@ -2219,8 +2216,8 @@
 
                 let tLabel = entry.type === 'transfer' ? '이체/상환' : (inc > 0 ? '수입' : '지출');
                 let lText = '';
-                const a1 = DataStore.state.assets.find(a => a.id === entry.linkedAsset1); if (a1) lText += `<span style="font-size:9px; color:${entry.linkedAssetOp1 === '+' ? 'var(--color-income)' : 'var(--color-expense)'}; display:block; line-height:1;">[${Utils.escHtml(a1.name)}${Utils.escHtml(entry.linkedAssetOp1)}]</span>`;
-                const a2 = DataStore.state.assets.find(a => a.id === entry.linkedAsset2); if (a2) lText += `<span style="font-size:9px; color:${entry.linkedAssetOp2 === '+' ? 'var(--color-income)' : 'var(--color-expense)'}; display:block; line-height:1;">[${Utils.escHtml(a2.name)}${Utils.escHtml(entry.linkedAssetOp2)}]</span>`;
+                const a1 = DataStore.state.assets.find(a => String(a.id) === String(entry.linkedAsset1)); if (a1) lText += `<span style="font-size:9px; color:${entry.linkedAssetOp1 === '+' ? 'var(--color-income)' : 'var(--color-expense)'}; display:block; line-height:1;">[${Utils.escHtml(a1.name)}${Utils.escHtml(entry.linkedAssetOp1)}]</span>`;
+                const a2 = DataStore.state.assets.find(a => String(a.id) === String(entry.linkedAsset2)); if (a2) lText += `<span style="font-size:9px; color:${entry.linkedAssetOp2 === '+' ? 'var(--color-income)' : 'var(--color-expense)'}; display:block; line-height:1;">[${Utils.escHtml(a2.name)}${Utils.escHtml(entry.linkedAssetOp2)}]</span>`;
                 if (lText) tLabel += `<div style="margin-top:2px;">${lText}</div>`;
 
                 const rStyle = entry.exclude ? 'color: var(--text-muted); opacity: 0.5;' : '';
@@ -2233,7 +2230,7 @@
                 
                 let rHtml = `<td style="${rStyle} font-size:11px;">${Utils.escHtml((entry.date||'').slice(2))}</td><td style="${rStyle}">${tLabel}${badge}</td><td style="${rStyle} font-weight:bold; color:var(--text-title);">${Utils.escHtml(entry.desc || '')}</td><td class="${entry.exclude ? '' : 'text-blue'}" style="text-align:right; ${rStyle}"><span class="num-wrap">${incTxt}</span></td><td class="${entry.exclude ? '' : 'text-red'}" style="text-align:right; ${rStyle}"><span class="num-wrap">${expTxt}</span></td><td style="text-align:right; padding-right:15px; ${rStyle}"><span style="font-weight:900; font-variant-numeric: tabular-nums; color:var(--text-title);">${dispBal.toLocaleString()}</span></td><td style="${rStyle}">${Utils.escHtml(entry.note || '')}${mIcon}</td>`;
                 DataStore.state.customCols.forEach(col => rHtml += `<td style="${rStyle}">${Utils.escHtml(entry.customData?.[col.id] || '')}</td>`);
-                rHtml += `<td><button class="util-btn btn-gray" style="margin-bottom:2px;" onclick="AppCtrl.editEntry('${Utils.escHtml(entry.id)}')">수정</button> <button class="util-btn btn-del" onclick="AppCtrl.deleteEntry('${Utils.escHtml(entry.id)}')">삭제</button></td>`;
+                rHtml += `<td><button class="util-btn btn-gray" style="margin-bottom:2px;" onclick="AppCtrl.editEntry('${String(entry.id)}')">수정</button> <button class="util-btn btn-del" onclick="AppCtrl.deleteEntry('${String(entry.id)}')">삭제</button></td>`;
                 tbodyContent += `<tr ${tClass}>${rHtml}</tr>`;
             });
 
@@ -2357,7 +2354,7 @@
 
         deleteSubscription(id) {
             if (confirm('이 구독 항목을 삭제하시겠습니까?')) {
-                DataStore.state.subscriptions = DataStore.state.subscriptions.filter(s => s.id !== id);
+                DataStore.state.subscriptions = DataStore.state.subscriptions.filter(s => String(s.id) !== String(id));
                 DataStore.save();
                 DataStore.pushState();
                 UIManager.renderSubscriptionModule();
@@ -2422,7 +2419,7 @@
 
         deleteStockRecord(id) {
             if(confirm('이 달의 주식 기록을 삭제하시겠습니까? (이후 달의 누적 수익률 계산이 변동됩니다)')) {
-                DataStore.state.stockRecords = DataStore.state.stockRecords.filter(r => r.id !== id);
+                DataStore.state.stockRecords = DataStore.state.stockRecords.filter(r => String(r.id) !== String(id));
                 DataStore.save();
                 DataStore.pushState();
                 UIManager.renderStockModule();
@@ -2437,7 +2434,7 @@
 
             if (!name) { alert('자산명 입력 요망'); return; }
             if (UIManager.currentAssetEditId) {
-                const idx = DataStore.state.assets.findIndex(a => a.id === UIManager.currentAssetEditId);
+                const idx = DataStore.state.assets.findIndex(a => String(a.id) === String(UIManager.currentAssetEditId));
                 if (idx !== -1) DataStore.state.assets[idx] = { id: UIManager.currentAssetEditId, type, name, baseBalance: balance, inputDate, maturityDate, rate };
                 UIManager.cancelAssetEdit();
             } else {
@@ -2448,7 +2445,7 @@
         },
 
         editAsset(id) {
-            const ast = DataStore.state.assets.find(a => a.id === id); if (!ast) return;
+            const ast = DataStore.state.assets.find(a => String(a.id) === String(id)); if (!ast) return;
             UIManager.currentAssetEditId = id;
             document.getElementById('newAssetType').value = ast.type; document.getElementById('newAssetName').value = ast.name;
             document.getElementById('newAssetBalance').value = ast.baseBalance; document.getElementById('newAssetDate').value = ast.inputDate || '';
@@ -2465,13 +2462,13 @@
         },
 
         deleteAsset(id) {
-            const ast = DataStore.state.assets.find(a => a.id === id); if (!ast) return;
+            const ast = DataStore.state.assets.find(a => String(a.id) === String(id)); if (!ast) return;
             if(confirm(`[${ast.name}] 삭제하시겠습니까?`)) {
-                if(UIManager.currentAssetEditId === id) UIManager.cancelAssetEdit();
+                if(String(UIManager.currentAssetEditId) === String(id)) UIManager.cancelAssetEdit();
                 const delLinked = confirm('연동 가계부 내역 완전 삭제?\n[확인] 모두 삭제\n[취소] 내역 유지, 연동 해제');
-                DataStore.state.assets = DataStore.state.assets.filter(a => a.id !== id);
-                if (delLinked) DataStore.state.entries = DataStore.state.entries.filter(e => e.linkedAsset1 !== id && e.linkedAsset2 !== id);
-                else DataStore.state.entries.forEach(e => { if(e.linkedAsset1 === id) e.linkedAsset1 = ''; if(e.linkedAsset2 === id) e.linkedAsset2 = ''; });
+                DataStore.state.assets = DataStore.state.assets.filter(a => String(a.id) !== String(id));
+                if (delLinked) DataStore.state.entries = DataStore.state.entries.filter(e => String(e.linkedAsset1) !== String(id) && String(e.linkedAsset2) !== String(id));
+                else DataStore.state.entries.forEach(e => { if(String(e.linkedAsset1) === String(id)) e.linkedAsset1 = ''; if(String(e.linkedAsset2) === String(id)) e.linkedAsset2 = ''; });
                 DataStore.save(); DataStore.pushState(); UIManager.renderInputForm(); UIManager.render();
             }
         },
@@ -2482,10 +2479,10 @@
             document.getElementById('newColName').value = ''; DataStore.save(); DataStore.pushState(); UIManager.renderAll();
         },
         updateColName(id, newName) {
-            if(!newName.trim()) return; const col = DataStore.state.customCols.find(c => c.id === id);
+            if(!newName.trim()) return; const col = DataStore.state.customCols.find(c => String(c.id) === String(id));
             if(col) { col.name = newName.trim(); DataStore.save(); DataStore.pushState(); UIManager.renderAll(); }
         },
-        deleteCol(id) { if(confirm('삭제하시겠습니까?')) { DataStore.state.customCols = DataStore.state.customCols.filter(c => c.id !== id); DataStore.save(); DataStore.pushState(); UIManager.renderAll(); } },
+        deleteCol(id) { if(confirm('삭제하시겠습니까?')) { DataStore.state.customCols = DataStore.state.customCols.filter(c => String(c.id) !== String(id)); DataStore.save(); DataStore.pushState(); UIManager.renderAll(); } },
 
         submitEntry() {
             const startDateStr = document.getElementById('dateInput').value; const type = document.getElementById('typeInput').value;
@@ -2504,7 +2501,7 @@
             DataStore.state.customCols.forEach(col => { entryData.customData[col.id] = document.getElementById(`customInput_${col.id}`)?.value || ''; });
 
             if (UIManager.currentEditId) {
-                const idx = DataStore.state.entries.findIndex(e => e.id === UIManager.currentEditId);
+                const idx = DataStore.state.entries.findIndex(e => String(e.id) === String(UIManager.currentEditId));
                 if(idx !== -1) DataStore.state.entries[idx] = { ...DataStore.state.entries[idx], ...entryData, customData: { ...DataStore.state.entries[idx].customData, ...entryData.customData } };
                 UIManager.currentEditId = null; 
                 document.getElementById('submitBtn').innerText = '[등록]'; 
@@ -2518,14 +2515,18 @@
                     DataStore.state.recurringTasks.push({ id: 'rec_' + Utils.generateID(), ...entryData, repeatType: rType, nextDate: Utils.getLocalYYYYMMDD(d), endDate: document.getElementById('repeatEndDate').value || null });
                 }
             }
-            // [수정됨] 폼 텍스트 초기화 및 데이터 로직 고도화
-            UIManager.clearInputs();
+            
+            // 입력 후 값 초기화 (연속입력을 위해 날짜는 남김)
+            document.getElementById('descInput').value = ''; 
+            document.getElementById('amountInput').value = '0';
+            document.getElementById('noteInput').value = '';
+            
             DataStore.state.entries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-            DataStore.save(); DataStore.pushState(); UIManager.render();
+            DataStore.save(); DataStore.pushState(); UIManager.render(); 
         },
 
         editEntry(id) {
-            const e = DataStore.state.entries.find(e => e.id === id); if(!e) return;
+            const e = DataStore.state.entries.find(e => String(e.id) === String(id)); if(!e) return;
             UIManager.currentEditId = id;
             document.getElementById('dateInput').value = e.date || ''; document.getElementById('typeInput').value = e.type || (e.income > 0 ? 'income' : 'expense');
             document.getElementById('descInput').value = e.desc || ''; document.getElementById('amountInput').value = e.amount || Math.max(e.income||0, e.expense||0);
@@ -2542,10 +2543,11 @@
             
             UIManager.switchTab('tab-ledger');
             
+            // 폼으로 강제 시점 이동 (부드러운 스크롤)
             setTimeout(() => {
-                const formEl = document.getElementById('inputFormGroup');
+                const formEl = document.getElementById('inputFormBox');
                 if (formEl) {
-                    formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } else {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
@@ -2557,8 +2559,8 @@
             document.getElementById('cancelEditBtn').style.display = 'none'; 
             UIManager.clearInputs(); 
         },
-        deleteEntry(id) { if(confirm('삭제하시겠습니까?')) { if(UIManager.currentEditId === id) this.cancelEdit(); DataStore.state.entries = DataStore.state.entries.filter(e => e.id !== id); DataStore.save(); DataStore.pushState(); UIManager.render(); } },
-        deleteRecurring(id) { if(confirm('예약 취소?')) { DataStore.state.recurringTasks = DataStore.state.recurringTasks.filter(t => t.id !== id); DataStore.save(); DataStore.pushState(); UIManager.renderRecurringTasks(); } },
+        deleteEntry(id) { if(confirm('삭제하시겠습니까?')) { if(String(UIManager.currentEditId) === String(id)) this.cancelEdit(); DataStore.state.entries = DataStore.state.entries.filter(e => String(e.id) !== String(id)); DataStore.save(); DataStore.pushState(); UIManager.render(); } },
+        deleteRecurring(id) { if(confirm('예약 취소?')) { DataStore.state.recurringTasks = DataStore.state.recurringTasks.filter(t => String(t.id) !== String(id)); DataStore.save(); DataStore.pushState(); UIManager.renderRecurringTasks(); } },
 
         checkRecurringTasks() {
             const today = Utils.getTodayString(); let updated = false; let newCnt = 0;
@@ -2631,7 +2633,7 @@
                     runningBalance += (inc - exp);
                 }
 
-                let a1 = DataStore.state.assets.find(a => a.id === e.linkedAsset1); let a2 = DataStore.state.assets.find(a => a.id === e.linkedAsset2);
+                let a1 = DataStore.state.assets.find(a => String(a.id) === String(e.linkedAsset1)); let a2 = DataStore.state.assets.find(a => String(a.id) === String(e.linkedAsset2));
                 let row = `${e.date||''},${e.type === 'transfer' ? '이체' : (e.income > 0 ? '수입' : '지출')},${a1?.name||''},${e.linkedAssetOp1||''},${a2?.name||''},${e.linkedAssetOp2||''},${e.exclude ? 'O' : 'X'},${e.excludeStatsOnly ? 'O' : 'X'},"${(e.desc||'').replace(/"/g, '""')}",${inc},${exp},"${(e.note||'').replace(/"/g, '""')}","${(e.memo||'').replace(/"/g, '""')}",${runningBalance}`;
                 
                 DataStore.state.customCols.forEach(col => row += `,"${(e.customData?.[col.id]||'').replace(/"/g, '""')}"`);
@@ -2688,7 +2690,7 @@
 
                     const parseNumber = (str) => parseInt((str || '0').toString().replace(/,/g, '')) || 0;
                     const assetMap = {};
-                    DataStore.state.assets.forEach(a => assetMap[a.name] = a.id);
+                    DataStore.state.assets.forEach(a => assetMap[a.name] = String(a.id));
 
                     for (let i = 1; i < lines.length; i++) {
                         const cols = parseCSVRow(lines[i]);
