@@ -110,7 +110,7 @@
         .bg-gray { background-color: var(--border-light); color: var(--text-main); }
         .bg-danger { background-color: var(--color-expense) !important; color: white !important;}
         
-        .checkbox-label { font-size: 13px; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); cursor: pointer; }
+        .checkbox-label { font-size: 12px; display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--text-main); cursor: pointer; }
 
         .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
         .summary-card { background: var(--bg-box); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: center; }
@@ -222,7 +222,7 @@
             
             <div class="summary-grid">
                 <div class="summary-card main">
-                    <div class="label" id="sumBalanceText">최종 잔액</div>
+                    <div class="label" id="sumBalanceText">최종 잔액 (전체)</div>
                     <div class="value" id="sumBalance">0</div>
                 </div>
                 <div class="summary-card">
@@ -539,7 +539,7 @@
             </div>
             
             <div style="text-align: center; margin-top: 30px; font-size: 11px; color: var(--text-muted); font-weight: bold;">
-                통합 자산 가계부 System v6.6 (Complete Polish)<br>
+                통합 자산 가계부 System v7.0 (Ultimate Edit)<br>
                 Designed by JM Mentor
             </div>
         </div>
@@ -695,7 +695,10 @@
                     this.state.customCols.splice(oldNoteColIndex, 1);
                     changed = true;
                 }
+                
+                // [수정됨] 과거 데이터 유령화(Ghost Data) 방지를 위한 강제 ID 이식 알고리즘
                 this.state.entries.forEach(e => {
+                    if (!e.id) { e.id = 'ent_' + Utils.generateID(); changed = true; }
                     if (e.amount === undefined) { e.amount = Math.max(e.income || 0, e.expense || 0); changed = true; }
                     if (e.linkedAsset && !e.linkedAsset1) {
                         e.linkedAsset1 = e.linkedAsset;
@@ -1541,9 +1544,9 @@
                         <label class="checkbox-label"><input type="checkbox" id="excludeInput"> <strong>자산+통계 완전 제외</strong></label>
                     </div>
                     <div style="display:flex; gap:4px; flex:1; min-width: 140px; justify-content: flex-end;">
-                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">초기화</button>
-                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">취소</button>
-                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2; padding:0 8px; font-size:13px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">등록</button>
+                        <button id="resetFormBtn" class="std-btn btn-gray" onclick="UIManager.clearInputs()" style="flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">[초기화]</button>
+                        <button id="cancelEditBtn" class="std-btn btn-gray" onclick="AppCtrl.cancelEdit()" style="display:none; flex:1; padding:0 4px; font-size:13px; white-space:nowrap;">[취소]</button>
+                        <button id="submitBtn" class="std-btn bg-primary" style="flex:2; padding:0 8px; font-size:13px; white-space:nowrap;" onclick="AppCtrl.submitEntry()">[등록]</button>
                     </div>
                 </div>
                 <div id="recurringListContainer" style="width:100%;"></div>
@@ -1602,7 +1605,7 @@
         cancelAssetEdit() {
             this.currentAssetEditId = null;
             document.getElementById('newAssetType').value = 'asset'; document.getElementById('newAssetName').value = '';
-            document.getElementById('newAssetBalance').value = ast.baseBalance; document.getElementById('newAssetDate').value = '';
+            document.getElementById('newAssetBalance').value = ''; document.getElementById('newAssetDate').value = '';
             document.getElementById('newAssetMaturity').value = ''; document.getElementById('newAssetRate').value = '';
             document.getElementById('submitAssetBtn').innerText = '추가하기'; document.getElementById('cancelAssetEditBtn').style.display = 'none';
         },
@@ -2153,13 +2156,17 @@
             let filterStartDate = (!isSearchActive && yf !== 'all' && mf !== 'all') ? `${yf}-${mf.padStart(2, '0')}-01` : null;
             let yearStart = (!isSearchActive && yf !== 'all') ? `${yf}-01-01` : '0000-00-00';
 
-            // [수정됨] 사용자 설정에 따른 잔액 계산 방식 (전체 누적 vs 매년 초기화)
             let resetYearly = DataStore.state.settings && DataStore.state.settings.resetBalanceYearly === true;
             let tempGlobalBalance = 0;
             let tempYearlyBalance = 0;
             let lastYear = '';
 
-            // 전체 엔트리를 먼저 돌면서 누적 잔액(runningBalance)을 부여
+            // [수정됨] 최종 잔액 UI 동적 표기
+            const sumBalLabel = document.getElementById('sumBalanceText');
+            if (sumBalLabel) {
+                sumBalLabel.innerText = resetYearly ? '최종 잔액 (올해)' : '최종 잔액 (전체)';
+            }
+
             DataStore.state.entries.forEach(e => {
                 const inc = e.income || 0; const exp = e.expense || 0;
                 if (!e.exclude && e.type !== 'transfer') {
@@ -2180,16 +2187,15 @@
                 }
             });
 
-            // 화면에 띄울 '이월 잔액(carriedBalance)' 산출
             let carriedBalance = 0;
             DataStore.state.entries.forEach(e => {
                 const inc = e.income || 0; const exp = e.expense || 0;
                 if (!e.exclude && e.type !== 'transfer') {
                     if (!isSearchActive && filterStartDate && e.date < filterStartDate) {
                         if (resetYearly) {
-                            if (e.date >= yearStart) carriedBalance += (inc - exp); // 필터링된 같은 연도 안에서만 누적
+                            if (e.date >= yearStart) carriedBalance += (inc - exp); 
                         } else {
-                            carriedBalance += (inc - exp); // 10년 전 기록부터 전부 누적
+                            carriedBalance += (inc - exp); 
                         }
                     }
                 }
@@ -2241,7 +2247,6 @@
             if(document.getElementById('sumIncome')) document.getElementById('sumIncome').innerText = periodIncome.toLocaleString();
             if(document.getElementById('sumExpense')) document.getElementById('sumExpense').innerText = periodExpense.toLocaleString();
             
-            // 최종 잔액 표기
             if(document.getElementById('sumBalance')) document.getElementById('sumBalance').innerText = (isSearchActive ? pNet : carriedBalance + pNet).toLocaleString();
 
             try { this.renderChart(filteredEntries, pLabel, isSearchActive); } catch(e) { console.error("Chart Error:", e); }
@@ -2286,7 +2291,6 @@
             UIManager.initFilters(); 
             UIManager.initSwipeEngine(); 
             
-            // 초기 세팅값 UI 연동
             const resetCb = document.getElementById('resetBalanceYearlyInput');
             if (resetCb && DataStore.state.settings) {
                 resetCb.checked = DataStore.state.settings.resetBalanceYearly === true;
@@ -2514,8 +2518,10 @@
                     DataStore.state.recurringTasks.push({ id: 'rec_' + Utils.generateID(), ...entryData, repeatType: rType, nextDate: Utils.getLocalYYYYMMDD(d), endDate: document.getElementById('repeatEndDate').value || null });
                 }
             }
-            DataStore.state.entries.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-            DataStore.save(); DataStore.pushState(); UIManager.render(); document.getElementById('amountInput').value = '0';
+            // [수정됨] 폼 텍스트 초기화 및 데이터 로직 고도화
+            UIManager.clearInputs();
+            DataStore.state.entries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+            DataStore.save(); DataStore.pushState(); UIManager.render();
         },
 
         editEntry(id) {
@@ -2536,7 +2542,6 @@
             
             UIManager.switchTab('tab-ledger');
             
-            // [수정됨] 편집 모드 진입 시 입력폼 위치로 강제 스크롤링 (모바일 화면 이슈 해결)
             setTimeout(() => {
                 const formEl = document.getElementById('inputFormGroup');
                 if (formEl) {
@@ -2571,13 +2576,12 @@
             });
             if (updated) {
                 DataStore.state.recurringTasks = DataStore.state.recurringTasks.filter(t => !t.finished); DataStore.save();
-                if(newCnt > 0) { DataStore.state.entries.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0)); DataStore.pushState(); UIManager.renderAll(); }
+                if(newCnt > 0) { DataStore.state.entries.sort((a, b) => (a.date || '').localeCompare(b.date || '')); DataStore.pushState(); UIManager.renderAll(); }
             }
         },
 
-        // [수정됨] 화면의 필터(연도/월)를 완전히 무시하고 원본 데이터를 100% 추출하는 엔진
         getAllEntriesForBackup() {
-            return [...DataStore.state.entries].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+            return [...DataStore.state.entries].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
         },
 
         getFilteredEntries(isSearchActive, searchKeyword) {
@@ -2732,7 +2736,7 @@
                     }
 
                     if (addedCount > 0) {
-                        DataStore.state.entries.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+                        DataStore.state.entries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
                         DataStore.save();
                         DataStore.pushState();
                         alert(`총 ${addedCount}건의 데이터가 성공적으로 병합되었습니다.`);
